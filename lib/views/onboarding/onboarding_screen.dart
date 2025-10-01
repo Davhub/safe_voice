@@ -18,14 +18,15 @@ class OnboardingScreen extends StatelessWidget {
             children: [
               Column(
                 children: [
-                  const Icon(
-                    Icons.shield_outlined,
-                    size: 80,
-                    color: AppColors.primary, // The purple color for the icon
-                  ),
+                  Image.asset(
+                      'assets/pngs/Logo.png', // Direct path as fallback
+                      width: 80,
+                      height: 80,
+                      
+                    ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Safe Space',
+                    'Safe Voice',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,

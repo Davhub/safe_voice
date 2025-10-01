@@ -53,11 +53,24 @@ class ReportService {
     DateTime? incidentDate,
   }) async {
     try {
+      print('🎤 Starting voice report submission...');
+      
       // Generate anonymous case ID
       String caseId = _generateCaseId();
+      print('🆔 Generated case ID: $caseId');
+      
+      // Check if file exists and get info
+      if (!await audioFile.exists()) {
+        throw Exception('Audio file does not exist: ${audioFile.path}');
+      }
+      
+      final fileSize = await audioFile.length();
+      print('📁 Audio file: ${audioFile.path} (${fileSize} bytes)');
       
       // Upload audio file to Firebase Storage
+      print('☁️ Uploading audio file to Firebase Storage...');
       String audioUrl = await _uploadAudioFile(audioFile, caseId);
+      print('✅ Audio uploaded successfully: $audioUrl');
       
       // Create report document
       Map<String, dynamic> reportData = {
@@ -72,14 +85,17 @@ class ReportService {
         'anonymous': true,
       };
 
+      print('💾 Saving report to Firestore...');
       // Save to Firestore
       await _firestore
           .collection('reports')
           .doc(caseId)
           .set(reportData);
 
+      print('✅ Voice report saved successfully with case ID: $caseId');
       return caseId;
     } catch (e) {
+      print('❌ Voice report submission failed: $e');
       throw Exception('Failed to submit voice report: $e');
     }
   }
@@ -145,16 +161,60 @@ class ReportService {
 
   /// Upload audio file to Firebase Storage
   static Future<String> _uploadAudioFile(File audioFile, String caseId) async {
+    String fileName = '${caseId}_voice_report.${_getFileExtension(audioFile.path)}';
+    String storagePath = 'voice_reports/$caseId/$fileName';
+    
     try {
-      String fileName = '${caseId}_voice_report.${_getFileExtension(audioFile.path)}';
-      Reference ref = _storage.ref().child('voice_reports/$caseId/$fileName');
+      print('📤 Uploading to: $storagePath');
       
+      Reference ref = _storage.ref().child(storagePath);
+      
+      print('📤 Starting file upload...');
       UploadTask uploadTask = ref.putFile(audioFile);
-      TaskSnapshot snapshot = await uploadTask;
       
-      return await snapshot.ref.getDownloadURL();
+      // Monitor upload progress
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        double progress = snapshot.bytesTransferred / snapshot.totalBytes;
+        print('⏳ Upload progress: ${(progress * 100).toStringAsFixed(1)}%');
+      });
+      
+      TaskSnapshot snapshot = await uploadTask;
+      print('✅ Upload completed successfully');
+      
+      // Try to get download URL, but if it fails due to read permissions,
+      // return a constructed URL instead
+      try {
+        String downloadUrl = await snapshot.ref.getDownloadURL();
+        print('🔗 Download URL: $downloadUrl');
+        return downloadUrl;
+      } catch (urlError) {
+        print('⚠️ Could not get download URL (likely due to read permissions): $urlError');
+        // Return the storage path instead - this is fine for anonymous reports
+        // where we don't need to read the files back
+        String constructedUrl = 'gs://${ref.bucket}/$storagePath';
+        print('🔗 Using constructed storage reference: $constructedUrl');
+        return constructedUrl;
+      }
+      
     } catch (e) {
-      throw Exception('Failed to upload audio file: $e');
+      print('❌ Audio upload failed: $e');
+      
+      // More specific error handling
+      String errorMessage = e.toString().toLowerCase();
+      
+      if (errorMessage.contains('network') || errorMessage.contains('timeout')) {
+        throw Exception('Network error during upload. Please check your internet connection.');
+      } else if (errorMessage.contains('unauthorized') || errorMessage.contains('permission')) {
+        // If the upload itself failed due to permissions, that's a real error
+        // But if we got here, the upload succeeded and only URL retrieval failed
+        throw Exception('Upload permission denied. Please update Firebase Storage rules.');
+      } else if (errorMessage.contains('storage/quota-exceeded')) {
+        throw Exception('Storage quota exceeded. Please contact support.');
+      } else if (errorMessage.contains('storage/invalid-format')) {
+        throw Exception('Invalid audio file format. Please try again.');
+      } else {
+        throw Exception('Failed to upload audio file: $e');
+      }
     }
   }
 

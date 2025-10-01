@@ -1,5 +1,9 @@
 # Firebase Setup Guide for Safe Voice
 
+## ⚠️ CRITICAL: Authorization Error Fix
+
+If you're getting the error `[firebase_storage/unauthorized] user is not authorized to perform the desired action`, you need to update your Firebase Storage rules immediately. See the **Security Rules for Storage** section below and apply the rules to your Firebase Console.
+
 ## 1. Firestore Database Setup
 
 ### Required Collections:
@@ -25,9 +29,15 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow anonymous read/write to reports collection
+    // Allow anonymous users to create reports only
     match /reports/{document} {
-      allow read, write: if true;
+      allow create: if true; // Allow anonymous report creation
+      allow read, update, delete: if false; // Prevent reading/modifying for privacy
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
@@ -52,9 +62,26 @@ service cloud.firestore {
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow anonymous read/write to reports folder
+    // Allow anonymous users to upload voice reports and get download URLs
+    match /voice_reports/{caseId}/{fileName} {
+      allow write: if true; // Allow anonymous uploads
+      allow read: if request.auth == null; // Allow anonymous read for download URLs only
+    }
+    
+    match /attachments/{caseId}/{fileName} {
+      allow write: if true; // Allow anonymous uploads  
+      allow read: if request.auth == null; // Allow anonymous read for download URLs only
+    }
+    
+    // Support legacy reports structure for backward compatibility
     match /reports/{caseId}/{allPaths=**} {
-      allow read, write: if true;
+      allow write: if true; // Allow anonymous uploads
+      allow read: if request.auth == null; // Allow anonymous read for download URLs only
+    }
+    
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }

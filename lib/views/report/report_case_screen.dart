@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:safe_voice/constant/colors.dart';
 import 'package:safe_voice/services/services.dart';
@@ -14,12 +15,138 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
   final TextEditingController _reportController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   bool _isSubmitting = false;
+  bool _isRecording = false;
+  String? _recordingPath;
+  Duration _recordingDuration = Duration.zero;
+  late Stream<Duration> _durationStream;
 
   @override
   void dispose() {
     _reportController.dispose();
     _locationController.dispose();
     super.dispose();
+  }
+
+  /// Start voice recording
+  Future<void> _startRecording() async {
+    try {
+      final success = await AudioRecordingService.startRecording();
+      if (success) {
+        setState(() {
+          _isRecording = true;
+          _recordingDuration = Duration.zero;
+        });
+        
+        // Start duration timer
+        _durationStream = Stream.periodic(const Duration(seconds: 1), (count) {
+          return Duration(seconds: count + 1);
+        });
+        
+        _durationStream.listen((duration) {
+          if (_isRecording) {
+            setState(() {
+              _recordingDuration = duration;
+            });
+          }
+        });
+        
+        _showInfoDialog('🎤 Recording started. Speak your report clearly.');
+      } else {
+        _showErrorDialog('Failed to start recording. Please check microphone permissions.');
+      }
+    } catch (e) {
+      _showErrorDialog('Error starting recording: $e');
+    }
+  }
+
+  /// Stop voice recording
+  Future<void> _stopRecording() async {
+    try {
+      final recordingPath = await AudioRecordingService.stopRecording();
+      setState(() {
+        _isRecording = false;
+        _recordingPath = recordingPath;
+      });
+      
+      if (recordingPath != null) {
+        _showInfoDialog('✅ Recording saved! You can now submit your voice report.');
+      } else {
+        _showErrorDialog('Failed to save recording. Please try again.');
+      }
+    } catch (e) {
+      _showErrorDialog('Error stopping recording: $e');
+    }
+  }
+
+  /// Cancel voice recording
+  Future<void> _cancelRecording() async {
+    try {
+      await AudioRecordingService.cancelRecording();
+      setState(() {
+        _isRecording = false;
+        _recordingPath = null;
+        _recordingDuration = Duration.zero;
+      });
+      _showInfoDialog('🗑️ Recording cancelled.');
+    } catch (e) {
+      _showErrorDialog('Error cancelling recording: $e');
+    }
+  }
+
+  /// Submit voice report
+  Future<void> _submitVoiceReport() async {
+    if (_recordingPath == null) {
+      _showErrorDialog('Please record your voice report first.');
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      // Check if file exists
+      final file = File(_recordingPath!);
+      if (!await file.exists()) {
+        throw Exception('Recording file not found: $_recordingPath');
+      }
+
+      print('📁 Submitting voice report: ${file.path}');
+      print('📁 File size: ${await file.length()} bytes');
+
+      // Submit voice report to Firebase
+      String caseId = await ReportService.submitVoiceReport(
+        audioFile: file,
+        location: _locationController.text.trim().isEmpty 
+            ? null 
+            : _locationController.text.trim(),
+        incidentDate: DateTime.now(),
+      );
+
+      print('✅ Voice report submitted successfully with Case ID: $caseId');
+
+      // Show success dialog with case ID
+      if (mounted) {
+        showCaseIDDialog(context, caseId);
+        // Clear the form
+        _locationController.clear();
+        setState(() {
+          _recordingPath = null;
+        });
+      }
+    } catch (e) {
+      // Show detailed error for debugging
+      print('❌ Voice report submission error: $e');
+      if (mounted) {
+        _showErrorDialog('Failed to submit voice report: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 
   /// Submit the report to Firebase
@@ -65,6 +192,35 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
     }
   }
 
+  /// Test Firebase connectivity
+  Future<void> _testFirebaseConnectivity() async {
+    _showInfoDialog('🧪 Running Firebase connectivity tests...');
+    
+    try {
+      final results = await FirebaseConnectivityTest.runAllTests();
+      
+      final firestoreOk = results['firestore'] ?? false;
+      final storageOk = results['storage'] ?? false;
+      
+      String message;
+      if (firestoreOk && storageOk) {
+        message = '✅ All Firebase services are working!\n\n'
+                 '• Firestore: Connected ✅\n'
+                 '• Storage: Connected ✅\n\n'
+                 'Voice recording should work now.';
+      } else {
+        message = '⚠️ Some Firebase services have issues:\n\n'
+                 '• Firestore: ${firestoreOk ? 'Connected ✅' : 'Failed ❌'}\n'
+                 '• Storage: ${storageOk ? 'Connected ✅' : 'Failed ❌'}\n\n'
+                 'Please check your internet connection and Firebase setup.';
+      }
+      
+      _showInfoDialog(message);
+    } catch (e) {
+      _showErrorDialog('Firebase test failed: $e');
+    }
+  }
+
   /// Show error dialog
   void _showErrorDialog(String message) {
     showDialog(
@@ -72,6 +228,25 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Error'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Show info dialog
+  void _showInfoDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Info'),
           content: Text(message),
           actions: [
             TextButton(
@@ -137,32 +312,198 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
             ),
             const SizedBox(height: 40),
             // Voice Report Section
-            Column(
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    _isRecording ? Icons.mic : Icons.mic_none,
+                    size: 80,
+                    color: _isRecording ? AppColors.error : AppColors.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _isRecording ? 'Recording...' : 'Record Voice Report',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: _isRecording ? AppColors.error : AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _isRecording 
+                        ? 'Tap stop when finished (${_recordingDuration.inMinutes}:${(_recordingDuration.inSeconds % 60).toString().padLeft(2, '0')})'
+                        : _recordingPath != null 
+                            ? '✅ Recording ready to submit'
+                            : 'Speak your report privately',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  // Recording Controls
+                  if (!_isRecording && _recordingPath == null)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _startRecording,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text(
+                          'Start Recording',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textOnPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (_isRecording)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _stopRecording,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text(
+                              'Stop',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textOnPrimary,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _cancelRecording,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.error,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textOnPrimary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (_recordingPath != null && !_isRecording)
+                    Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _isSubmitting ? null : _submitVoiceReport,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                                child: _isSubmitting
+                                    ? const SizedBox(
+                                        height: 16,
+                                        width: 16,
+                                        child: CircularProgressIndicator(
+                                          color: AppColors.textOnPrimary,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Submit Voice Report',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.textOnPrimary,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _recordingPath = null;
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.textSecondary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                              ),
+                              child: const Icon(
+                                Icons.delete,
+                                color: AppColors.textOnPrimary,
+                                size: 20,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Divider
+            Row(
               children: const [
-                Icon(
-                  Icons.mic_none,
-                  size: 100,
-                  color: AppColors.primary,
-                ),
-                SizedBox(height: 10),
-                Text(
-                  'Record Voice Report',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                Expanded(child: Divider(color: AppColors.textSecondary)),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'OR',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                Text(
-                  'Speak your report privately',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
+                Expanded(child: Divider(color: AppColors.textSecondary)),
               ],
             ),
-            const SizedBox(height: 40),
+            // const SizedBox(height: 20),
             // Text Field Section
             const Text(
               'Type your report below:',
@@ -205,6 +546,28 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
               ),
             ),
             const SizedBox(height: 24),
+            // Firebase Test Button (for debugging)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _testFirebaseConnectivity,
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.info, width: 1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text(
+                  'Test Firebase Connection',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.info,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             // Submit Button
             SizedBox(
               width: double.infinity,
