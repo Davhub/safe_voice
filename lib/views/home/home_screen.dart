@@ -7,95 +7,95 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
   /// Test Firebase connectivity
-  Future<void> _testFirebaseConnection(BuildContext context) async {
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Testing Firebase connection...'),
-            ],
-          ),
-        );
-      },
-    );
+  // Future<void> _testFirebaseConnection(BuildContext context) async {
+  //   // Show loading dialog
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (BuildContext context) {
+  //       return const AlertDialog(
+  //         content: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           children: [
+  //             CircularProgressIndicator(),
+  //             SizedBox(height: 16),
+  //             Text('Testing Firebase connection...'),
+  //           ],
+  //         ),
+  //       );
+  //     },
+  //   );
 
-    try {
-      // Run Firebase tests
-      Map<String, bool> results = await FirebaseTestService.runAllTests();
+  //   try {
+  //     // Run Firebase tests
+  //     Map<String, bool> results = await FirebaseTestService.runAllTests();
       
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
+  //     if (context.mounted) {
+  //       Navigator.of(context).pop(); // Close loading dialog
         
-        // Show results dialog
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            bool allPassed = results.values.every((result) => result);
-            return AlertDialog(
-              title: Text(
-                allPassed ? '✅ Firebase Connected!' : '⚠️ Connection Issues',
-                style: TextStyle(
-                  color: allPassed ? Colors.green : Colors.orange,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Test Results:'),
-                  SizedBox(height: 8),
-                  ...results.entries.map((entry) => Text(
-                    '${entry.value ? '✅' : '❌'} ${entry.key}: ${entry.value ? 'PASSED' : 'FAILED'}',
-                  )),
-                  if (!allPassed) ...[
-                    SizedBox(height: 12),
-                    Text(
-                      'Check your internet connection and Firebase setup.',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('OK'),
-                ),
-              ],
-            );
-          },
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
+  //       // Show results dialog
+  //       showDialog(
+  //         context: context,
+  //         builder: (BuildContext context) {
+  //           bool allPassed = results.values.every((result) => result);
+  //           return AlertDialog(
+  //             title: Text(
+  //               allPassed ? '✅ Firebase Connected!' : '⚠️ Connection Issues',
+  //               style: TextStyle(
+  //                 color: allPassed ? Colors.green : Colors.orange,
+  //               ),
+  //             ),
+  //             content: Column(
+  //               mainAxisSize: MainAxisSize.min,
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 Text('Test Results:'),
+  //                 SizedBox(height: 8),
+  //                 ...results.entries.map((entry) => Text(
+  //                   '${entry.value ? '✅' : '❌'} ${entry.key}: ${entry.value ? 'PASSED' : 'FAILED'}',
+  //                 )),
+  //                 if (!allPassed) ...[
+  //                   SizedBox(height: 12),
+  //                   Text(
+  //                     'Check your internet connection and Firebase setup.',
+  //                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+  //                   ),
+  //                 ],
+  //               ],
+  //             ),
+  //             actions: [
+  //               TextButton(
+  //                 onPressed: () => Navigator.of(context).pop(),
+  //                 child: const Text('OK'),
+  //               ),
+  //             ],
+  //           );
+  //         },
+  //       );
+  //     }
+  //   } catch (e) {
+  //     if (context.mounted) {
+  //       Navigator.of(context).pop(); // Close loading dialog
         
-        // Show error dialog
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('❌ Connection Failed'),
-              content: Text('Error: $e'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('OK'),
-                ),
-              ],
-            );
-          },
-        );
-      }
-    }
-  }
+  //       // Show error dialog
+  //       showDialog(
+  //         context: context,
+  //         builder: (BuildContext context) {
+  //           return AlertDialog(
+  //             title: const Text('❌ Connection Failed'),
+  //             content: Text('Error: $e'),
+  //             actions: [
+  //               TextButton(
+  //                 onPressed: () => Navigator.of(context).pop(),
+  //                 child: const Text('OK'),
+  //               ),
+  //             ],
+  //           );
+  //         },
+  //       );
+  //     }
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -132,15 +132,15 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
               // Firebase test button (development only)
-              IconButton(
-                onPressed: () => _testFirebaseConnection(context),
-                icon: const Icon(
-                  Icons.wifi_protected_setup,
-                  color: AppColors.primary,
-                  size: 28,
-                ),
-                tooltip: 'Test Firebase Connection',
-              ),
+              // IconButton(
+              //   onPressed: () => _testFirebaseConnection(context),
+              //   icon: const Icon(
+              //     Icons.wifi_protected_setup,
+              //     color: AppColors.primary,
+              //     size: 28,
+              //   ),
+              //   tooltip: 'Test Firebase Connection',
+              // ),
             ],
           ),
         ),
@@ -337,7 +337,7 @@ class HomeScreen extends StatelessWidget {
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.crisis_alert,
+                        Icons.support,
                         size: 40,
                         color: AppColors.textOnPrimary,
                       ),
@@ -347,7 +347,7 @@ class HomeScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: const [
                             Text(
-                              'Emergency SOS',
+                              'Book a session',
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -356,7 +356,7 @@ class HomeScreen extends StatelessWidget {
                             ),
                             SizedBox(height: 4),
                             Text(
-                              'Get Immediate Help in an Emergency',
+                              'Counselling and Psychosocial support',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.white70,
@@ -371,28 +371,7 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            // Featured Education Section
-            const Text(
-              'Featured Education',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 180, // Adjust height as needed
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: 5, // Example count
-                itemBuilder: (context, index) {
-                  return buildEducationCard(index);
-                },
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Resources Section
+            
             
           ],
         ),

@@ -2,6 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:safe_voice/constant/colors.dart';
 import 'package:safe_voice/services/services.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class ReportCaseScreen extends StatefulWidget {
   final bool showBack;
@@ -19,12 +22,87 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
   String? _recordingPath;
   Duration _recordingDuration = Duration.zero;
   late Stream<Duration> _durationStream;
+  
+  // New state variables for better UX
+  bool _hasVoiceReport = false;
+  bool _hasTextReport = false;
+  String? _currentLocation;
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+    _setupTextListener();
+  }
 
   @override
   void dispose() {
     _reportController.dispose();
     _locationController.dispose();
     super.dispose();
+  }
+
+  /// Setup text field listener to track changes
+  void _setupTextListener() {
+    _reportController.addListener(() {
+      setState(() {
+        _hasTextReport = _reportController.text.trim().isNotEmpty;
+      });
+    });
+  }
+
+  /// Get current location in background
+  Future<void> _getCurrentLocation() async {
+    try {
+      setState(() {
+        _currentLocation = "Getting location...";
+      });
+
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _currentLocation = "Location services are disabled";
+        });
+        return;
+      }
+
+      // Check location permissions
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _currentLocation = "Location permission denied";
+          });
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _currentLocation = "Location permission permanently denied";
+        });
+        return;
+      }
+
+      // Get current position
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // Format the location
+      String locationText = "Lat: ${position.latitude.toStringAsFixed(6)}, "
+                           "Long: ${position.longitude.toStringAsFixed(6)}";
+      
+      setState(() {
+        _currentLocation = locationText;
+      });
+    } catch (e) {
+      setState(() {
+        _currentLocation = "Location unavailable: ${e.toString()}";
+      });
+    }
   }
 
   /// Start voice recording
@@ -264,6 +342,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        foregroundColor: Colors.white,
         title: const Text(
           'Report Case',
           style: TextStyle(
@@ -547,26 +626,26 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
             ),
             const SizedBox(height: 24),
             // Firebase Test Button (for debugging)
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: _testFirebaseConnectivity,
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.info, width: 1),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text(
-                  'Test Firebase Connection',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.info,
-                  ),
-                ),
-              ),
-            ),
+            // SizedBox(
+            //   width: double.infinity,
+            //   child: OutlinedButton(
+            //     onPressed: _testFirebaseConnectivity,
+            //     style: OutlinedButton.styleFrom(
+            //       side: const BorderSide(color: AppColors.info, width: 1),
+            //       shape: RoundedRectangleBorder(
+            //         borderRadius: BorderRadius.circular(12),
+            //       ),
+            //       padding: const EdgeInsets.symmetric(vertical: 12),
+            //     ),
+            //     child: const Text(
+            //       'Test Firebase Connection',
+            //       style: TextStyle(
+            //         fontSize: 14,
+            //         color: AppColors.info,
+            //       ),
+            //     ),
+            //   ),
+            // ),
             const SizedBox(height: 16),
             // Submit Button
             SizedBox(

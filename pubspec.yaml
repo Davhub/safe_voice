@@ -41,7 +41,7 @@ dependencies:
   firebase_storage: ^11.7.7
   
   # For generating anonymous case IDs and file handling
-  uuid: ^3.0.7
+  uuid: ^4.0.0
   path_provider: ^2.1.2
   
   # For voice recording functionality (temporarily disabled)
@@ -53,6 +53,13 @@ dependencies:
   
   # For permissions (microphone, storage)
   permission_handler: ^11.3.1
+  
+  # For improved UX and state management
+  shared_preferences: ^2.2.2
+  connectivity_plus: ^5.0.1
+  
+  # For location services
+  geolocator: ^12.0.0
 
 dev_dependencies:
   flutter_test:
