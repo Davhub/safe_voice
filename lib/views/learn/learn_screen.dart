@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:safe_voice/constant/api_routes.dart';
 import 'package:safe_voice/constant/colors.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class LearnScreen extends StatelessWidget {
   final bool showBack;
@@ -91,14 +93,36 @@ class LearnScreen extends StatelessWidget {
               itemCount: educationalTopics.length,
               itemBuilder: (context, index) {
                 final topic = educationalTopics[index];
-                return _EducationCard(
-                  title: topic['title'],
-                  subtitle: topic['subtitle'],
-                  icon: topic['icon'],
-                  iconColor: topic['color'],
-                  onTap: () {
-                    // TODO: Navigate to a detailed screen for this topic
+                return GestureDetector(
+                  onTap: ()async{
+                    final Uri url = Uri.parse(
+                                      "${ApiRoute.webUrl}/about-us");
+
+                                  if (await canLaunchUrl(url)) {
+                                    await launchUrl(url, 
+                                        mode: LaunchMode.externalApplication);
+                                  } else {
+                                    throw "Could not launch $url";
+                                  }
                   },
+                  child: _EducationCard(
+                    title: topic['title'],
+                    subtitle: topic['subtitle'],
+                    icon: topic['icon'],
+                    iconColor: topic['color'],
+                    onTap: () async {
+                      // TODO: Navigate to a detailed screen for this topic
+                      final Uri url = Uri.parse(
+                                      "${ApiRoute.webUrl}/about-us");
+
+                                  if (await canLaunchUrl(url)) {
+                                    await launchUrl(url, 
+                                        mode: LaunchMode.externalApplication);
+                                  } else {
+                                    throw "Could not launch $url";
+                                  }
+                    },
+                  ),
                 );
               },
             ),

@@ -1,10 +1,121 @@
 import 'package:flutter/material.dart';
+import 'package:safe_voice/constant/api_routes.dart';
 import 'package:safe_voice/views/views.dart';
 import 'package:safe_voice/constant/colors.dart';
 import 'package:safe_voice/services/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+import 'package:flutter/services.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
+
+  /// Helper method to launch URL with comprehensive error handling
+  // Future<void> _launchURL(String url, BuildContext context) async {
+  //   try {
+  //     // Method 1: Try the simple string-based approach (most reliable)
+  //     bool launched = false;
+      
+  //     try {
+  //       launched = await launchUrlString(url);
+  //       if (launched) return;
+  //     } catch (e) {
+  //       debugPrint('launchUrlString failed: $e');
+  //     }
+      
+  //     // Method 2: Try with URI parsing and default mode
+  //     try {
+  //       final Uri uri = Uri.parse(url);
+  //       launched = await launchUrl(uri);
+  //       if (launched) return;
+  //     } catch (e) {
+  //       debugPrint('launchUrl default failed: $e');
+  //     }
+      
+  //     // Method 3: Try with external application mode
+  //     try {
+  //       final Uri uri = Uri.parse(url);
+  //       launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  //       if (launched) return;
+  //     } catch (e) {
+  //       debugPrint('launchUrl external failed: $e');
+  //     }
+      
+  //     // Method 4: Try with platform default mode
+  //     try {
+  //       final Uri uri = Uri.parse(url);
+  //       launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
+  //       if (launched) return;
+  //     } catch (e) {
+  //       debugPrint('launchUrl platform default failed: $e');
+  //     }
+      
+  //     // If all methods fail, show error with fallback options
+  //     throw PlatformException(
+  //       code: 'UNAVAILABLE',
+  //       message: 'All URL launch methods failed',
+  //     );
+      
+  //   } on PlatformException catch (e) {
+  //     debugPrint('Platform Exception: ${e.message}');
+  //     if (context.mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: const Text('Cannot open website. Browser might not be available.'),
+  //           backgroundColor: AppColors.error,
+  //           duration: const Duration(seconds: 5),
+  //           action: SnackBarAction(
+  //             label: 'Copy URL',
+  //             textColor: Colors.white,
+  //             onPressed: () {
+  //               Clipboard.setData(ClipboardData(text: url));
+  //               ScaffoldMessenger.of(context).showSnackBar(
+  //                 const SnackBar(
+  //                   content: Text('URL copied to clipboard'),
+  //                   duration: Duration(seconds: 2),
+  //                 ),
+  //               );
+  //             },
+  //           ),
+  //         ),
+  //       );
+  //     }
+  //   } catch (e) {
+  //     debugPrint('General Exception: $e');
+  //     if (context.mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text('Error opening website: $e'),
+  //           backgroundColor: AppColors.error,
+  //           duration: const Duration(seconds: 4),
+  //           action: SnackBarAction(
+  //             label: 'Copy URL',
+  //             textColor: Colors.white,
+  //             onPressed: () {
+  //               Clipboard.setData(ClipboardData(text: url));
+  //               ScaffoldMessenger.of(context).showSnackBar(
+  //                 const SnackBar(
+  //                   content: Text('URL copied to clipboard'),
+  //                   duration: Duration(seconds: 2),
+  //                 ),
+  //               );
+  //             },
+  //           ),
+  //         ),
+  //       );
+  //     }
+  //   }
+  // }
+
+  // /// Open Learn about FGM website
+  // Future<void> _openLearnAboutFGM(BuildContext context) async {
+  //   await _launchURL('https://trailblazerinitiative.org.ng', context);
+  // }
+
+  // /// Open Book a session website
+  // Future<void> _openBookSession(BuildContext context) async {
+  //   await _launchURL('https://trailblazerinitiative.org.ng', context);
+  // }
 
   /// Test Firebase connectivity
   // Future<void> _testFirebaseConnection(BuildContext context) async {
@@ -207,12 +318,8 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 15),
             // Learn Section
             GestureDetector(
-              onTap: () {
-                // Navigate to the report case screen
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LearnScreen()),
-                );
+              onTap: ()  {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const LearnScreen(),));
               },
               child: Card(
                 color: AppColors.primary,
@@ -319,12 +426,16 @@ class HomeScreen extends StatelessWidget {
 
             //Emergency SOS Section
             GestureDetector(
-              onTap: () {
-                // Navigate to the emergency SOS screen
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const EmergencySOSScreen()),
-                );
+              onTap: () async {
+                final Uri url = Uri.parse(
+                                      "${ApiRoute.webUrl}/contact-us");
+
+                                  if (await canLaunchUrl(url)) {
+                                    await launchUrl(url, 
+                                        mode: LaunchMode.externalApplication);
+                                  } else {
+                                    throw "Could not launch $url";
+                                  }
               },
               child: Card(
                 color: AppColors.primary,
