@@ -20,8 +20,8 @@ class OnboardingScreen extends StatelessWidget {
                 children: [
                   Image.asset(
                       'assets/pngs/Logo.png', // Direct path as fallback
-                      width: 80,
-                      height: 80,
+                      width: 140,
+                      height: 140,
                       
                     ),
                   const SizedBox(height: 16),
@@ -84,7 +84,7 @@ class OnboardingScreen extends StatelessWidget {
                         ),
                       ),
                       child: const Text(
-                        'Continue to App',
+                        'Report an FGM case today',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
