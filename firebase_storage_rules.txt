@@ -1,0 +1,30 @@
+// Firebase Storage Security Rules for Anonymous Reporting App
+// These rules should be applied in the Firebase Console -> Storage -> Rules
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow anonymous users to upload voice reports and get download URLs
+    match /voice_reports/{caseId}/{fileName} {
+      allow write: if true; // Allow anonymous uploads
+      allow read: if request.auth == null; // Allow anonymous read for download URLs only
+    }
+    
+    // Allow anonymous users to upload attachments and get download URLs
+    match /attachments/{caseId}/{fileName} {
+      allow write: if true; // Allow anonymous uploads
+      allow read: if request.auth == null; // Allow anonymous read for download URLs only
+    }
+    
+    // Support legacy reports structure for backward compatibility
+    match /reports/{caseId}/{allPaths=**} {
+      allow write: if true; // Allow anonymous uploads
+      allow read: if request.auth == null; // Allow anonymous read for download URLs only
+    }
+    
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
