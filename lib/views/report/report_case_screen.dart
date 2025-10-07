@@ -2,9 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:safe_voice/constant/colors.dart';
 import 'package:safe_voice/services/services.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:safe_voice/services/enhanced_report_service.dart';
+import 'package:safe_voice/services/audio_service.dart';
 
 class ReportCaseScreen extends StatefulWidget {
   final bool showBack;
@@ -18,21 +17,24 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
   final TextEditingController _reportController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   bool _isSubmitting = false;
+  bool _isSubmittingVoice = false; // Separate state for voice submission
   bool _isRecording = false;
   String? _recordingPath;
   Duration _recordingDuration = Duration.zero;
   late Stream<Duration> _durationStream;
   
   // New state variables for better UX
-  bool _hasVoiceReport = false;
-  bool _hasTextReport = false;
   String? _currentLocation;
+  String _networkStatus = 'Checking...';
+  int _pendingReportsCount = 0;
 
   @override
   void initState() {
     super.initState();
     _getCurrentLocation();
     _setupTextListener();
+    _checkNetworkStatus();
+    _loadPendingReportsCount();
   }
 
   @override
@@ -42,62 +44,57 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
     super.dispose();
   }
 
-  /// Setup text field listener to track changes
+  /// Set up text listener for real-time validation
   void _setupTextListener() {
     _reportController.addListener(() {
       setState(() {
-        _hasTextReport = _reportController.text.trim().isNotEmpty;
+        // Update state for real-time validation if needed
       });
     });
   }
 
-  /// Get current location in background
+  /// Check network status
+  Future<void> _checkNetworkStatus() async {
+    try {
+      String status = await EnhancedReportService.getConnectivityStatus();
+      setState(() {
+        _networkStatus = status;
+      });
+    } catch (e) {
+      setState(() {
+        _networkStatus = 'Unknown';
+      });
+    }
+  }
+
+  /// Load pending reports count
+  Future<void> _loadPendingReportsCount() async {
+    try {
+      int count = await EnhancedReportService.getPendingReportsCount();
+      setState(() {
+        _pendingReportsCount = count;
+      });
+    } catch (e) {
+      setState(() {
+        _pendingReportsCount = 0;
+      });
+    }
+  }  /// Get current location in background
   Future<void> _getCurrentLocation() async {
     try {
       setState(() {
         _currentLocation = "Getting location...";
       });
 
-      // Check if location services are enabled
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        setState(() {
-          _currentLocation = "Location services are disabled";
-        });
-        return;
-      }
-
-      // Check location permissions
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          setState(() {
-            _currentLocation = "Location permission denied";
-          });
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        setState(() {
-          _currentLocation = "Location permission permanently denied";
-        });
-        return;
-      }
-
-      // Get current position
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      // Format the location
-      String locationText = "Lat: ${position.latitude.toStringAsFixed(6)}, "
-                           "Long: ${position.longitude.toStringAsFixed(6)}";
+      // Mock location service - temporarily disabled due to package compatibility
+      await Future.delayed(Duration(seconds: 2)); // Simulate loading
       
+      // Set a mock location
       setState(() {
-        _currentLocation = locationText;
+        _currentLocation = "Lagos, Nigeria (Mock Location - Development Mode)";
       });
+      
+      print('✅ Mock location set: $_currentLocation');
     } catch (e) {
       setState(() {
         _currentLocation = "Location unavailable: ${e.toString()}";
@@ -108,7 +105,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
   /// Start voice recording
   Future<void> _startRecording() async {
     try {
-      final success = await AudioRecordingService.startRecording();
+      final success = await AudioService.startRecording();
       if (success) {
         setState(() {
           _isRecording = true;
@@ -128,7 +125,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
           }
         });
         
-        _showInfoDialog('🎤 Recording started. Speak your report clearly.');
+        _showInfoDialog('🎤 Recording started. ${AudioService.getPlatformStatusMessage()}');
       } else {
         _showErrorDialog('Failed to start recording. Please check microphone permissions.');
       }
@@ -140,14 +137,16 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
   /// Stop voice recording
   Future<void> _stopRecording() async {
     try {
-      final recordingPath = await AudioRecordingService.stopRecording();
+      final recordingFile = await AudioService.stopRecording();
       setState(() {
         _isRecording = false;
-        _recordingPath = recordingPath;
+        _recordingPath = recordingFile?.path;
       });
       
-      if (recordingPath != null) {
-        _showInfoDialog('✅ Recording saved! You can now submit your voice report.');
+      if (recordingFile != null) {
+        // Get file size for feedback
+        String fileSize = await AudioService.getFileSize(recordingFile.path);
+        _showInfoDialog('✅ Audio recording saved! ($fileSize)\n${AudioService.getPlatformStatusMessage()}\nYou can now submit your voice report.');
       } else {
         _showErrorDialog('Failed to save recording. Please try again.');
       }
@@ -159,7 +158,9 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
   /// Cancel voice recording
   Future<void> _cancelRecording() async {
     try {
-      await AudioRecordingService.cancelRecording();
+      if (_isRecording) {
+        await AudioService.stopRecording(); // Stop the recording first
+      }
       setState(() {
         _isRecording = false;
         _recordingPath = null;
@@ -179,8 +180,43 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
     }
 
     setState(() {
-      _isSubmitting = true;
+      _isSubmittingVoice = true; // Use separate voice submission state
     });
+
+    // Show progress dialog for voice submission
+    // if (mounted) {
+    //   showDialog(
+    //     context: context,
+    //     barrierDismissible: false,
+    //     builder: (BuildContext context) {
+    //       return AlertDialog(
+    //         content: Column(
+    //           mainAxisSize: MainAxisSize.min,
+    //           children: [
+    //             const CircularProgressIndicator(color: AppColors.primary),
+    //             const SizedBox(height: 16),
+    //             const Text(
+    //               'Uploading Voice Report...',
+    //               style: TextStyle(
+    //                 fontSize: 16,
+    //                 fontWeight: FontWeight.w600,
+    //                 color: AppColors.textPrimary,
+    //               ),
+    //             ),
+    //             const SizedBox(height: 8),
+    //             Text(
+    //               'This may take a moment',
+    //               style: TextStyle(
+    //                 fontSize: 14,
+    //                 color: AppColors.textSecondary,
+    //               ),
+    //             ),
+    //           ],
+    //         ),
+    //       );
+    //     },
+    //   );
+    // }
 
     try {
       // Check if file exists
@@ -192,37 +228,49 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
       print('📁 Submitting voice report: ${file.path}');
       print('📁 File size: ${await file.length()} bytes');
 
-      // Submit voice report to Firebase
-      String caseId = await ReportService.submitVoiceReport(
+      // Get location for submission - prioritize detected location, then manual input
+      String locationToSubmit = _currentLocation ?? 'Location unavailable';
+      if (_locationController.text.trim().isNotEmpty) {
+        locationToSubmit = _locationController.text.trim();
+      }
+
+      print('📍 Location being submitted: $locationToSubmit');
+
+      // Submit voice report using enhanced service with offline support
+      String caseId = await EnhancedReportService.submitVoiceReport(
         audioFile: file,
-        location: _locationController.text.trim().isEmpty 
-            ? null 
-            : _locationController.text.trim(),
+        location: locationToSubmit, // Include current location
         incidentDate: DateTime.now(),
       );
 
       print('✅ Voice report submitted successfully with Case ID: $caseId');
 
-      // Show success dialog with case ID
+      // Reset state immediately (no dialog to close since it's commented out)
       if (mounted) {
-        showCaseIDDialog(context, caseId);
-        // Clear the form
-        _locationController.clear();
         setState(() {
+          _isSubmittingVoice = false;
           _recordingPath = null;
         });
+        
+        // Clear location field
+        _locationController.clear();
+        
+        // Refresh pending reports count
+        _loadPendingReportsCount();
+        
+        // Show success dialog with case ID directly over the current screen
+        showCaseIDDialog(context, caseId);
       }
     } catch (e) {
-      // Show detailed error for debugging
-      print('❌ Voice report submission error: $e');
-      if (mounted) {
-        _showErrorDialog('Failed to submit voice report: $e');
-      }
-    } finally {
+      // Reset submission state and show error (no dialog to close)
       if (mounted) {
         setState(() {
-          _isSubmitting = false;
+          _isSubmittingVoice = false;
         });
+        
+        // Show detailed error for debugging
+        print('❌ Voice report submission error: $e');
+        _showErrorDialog('Failed to submit voice report: $e');
       }
     }
   }
@@ -240,12 +288,18 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
     });
 
     try {
-      // Submit report to Firebase
-      String caseId = await ReportService.submitTextReport(
+      // Get location for submission - prioritize detected location, then manual input
+      String locationToSubmit = _currentLocation ?? 'Location unavailable';
+      if (_locationController.text.trim().isNotEmpty) {
+        locationToSubmit = _locationController.text.trim();
+      }
+
+      print('📍 Location being submitted: $locationToSubmit');
+
+      // Submit report using enhanced service with offline support
+      String caseId = await EnhancedReportService.submitTextReport(
         reportText: _reportController.text.trim(),
-        location: _locationController.text.trim().isEmpty 
-            ? null 
-            : _locationController.text.trim(),
+        location: locationToSubmit, // Include current location
         incidentDate: DateTime.now(),
       );
 
@@ -271,34 +325,6 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
   }
 
   /// Test Firebase connectivity
-  Future<void> _testFirebaseConnectivity() async {
-    _showInfoDialog('🧪 Running Firebase connectivity tests...');
-    
-    try {
-      final results = await FirebaseConnectivityTest.runAllTests();
-      
-      final firestoreOk = results['firestore'] ?? false;
-      final storageOk = results['storage'] ?? false;
-      
-      String message;
-      if (firestoreOk && storageOk) {
-        message = '✅ All Firebase services are working!\n\n'
-                 '• Firestore: Connected ✅\n'
-                 '• Storage: Connected ✅\n\n'
-                 'Voice recording should work now.';
-      } else {
-        message = '⚠️ Some Firebase services have issues:\n\n'
-                 '• Firestore: ${firestoreOk ? 'Connected ✅' : 'Failed ❌'}\n'
-                 '• Storage: ${storageOk ? 'Connected ✅' : 'Failed ❌'}\n\n'
-                 'Please check your internet connection and Firebase setup.';
-      }
-      
-      _showInfoDialog(message);
-    } catch (e) {
-      _showErrorDialog('Firebase test failed: $e');
-    }
-  }
-
   /// Show error dialog
   void _showErrorDialog(String message) {
     showDialog(
@@ -343,12 +369,48 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         foregroundColor: Colors.white,
-        title: const Text(
-          'Report Case',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Report Case',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            // Network status indicator
+            Row(
+              children: [
+                Icon(
+                  _networkStatus == 'Offline' ? Icons.cloud_off : Icons.cloud_done,
+                  size: 16,
+                  color: _networkStatus == 'Offline' ? AppColors.error : AppColors.success,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _networkStatus,
+                  style: TextStyle(
+                    color: _networkStatus == 'Offline' ? AppColors.error : AppColors.success,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (_pendingReportsCount > 0) ...[
+                  const SizedBox(width: 8),
+                  Icon(Icons.sync, size: 14, color: AppColors.warning),
+                  Text(
+                    ' $_pendingReportsCount pending',
+                    style: TextStyle(
+                      color: AppColors.warning,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
         ),
         backgroundColor: AppColors.background,
         elevation: 0,
@@ -510,7 +572,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                           children: [
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: _isSubmitting ? null : _submitVoiceReport,
+                                onPressed: _isSubmittingVoice ? null : _submitVoiceReport, // Use voice-specific state
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary,
                                   shape: RoundedRectangleBorder(
@@ -518,7 +580,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                                   ),
                                   padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
-                                child: _isSubmitting
+                                child: _isSubmittingVoice // Use voice-specific state
                                     ? const SizedBox(
                                         height: 16,
                                         width: 16,
@@ -609,11 +671,73 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            // Current Location Display
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.my_location,
+                    color: _currentLocation != null && 
+                           !_currentLocation!.contains('unavailable') && 
+                           !_currentLocation!.contains('Getting location') &&
+                           !_currentLocation!.contains('disabled') &&
+                           !_currentLocation!.contains('denied')
+                        ? (_currentLocation!.contains('Mock Location') ? AppColors.warning : AppColors.success)
+                        : AppColors.error,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Detected Location:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _currentLocation ?? 'Getting location...',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_currentLocation != null && 
+                      (_currentLocation!.contains('unavailable') || 
+                       _currentLocation!.contains('disabled') || 
+                       _currentLocation!.contains('denied')))
+                    IconButton(
+                      onPressed: _getCurrentLocation,
+                      icon: const Icon(
+                        Icons.refresh,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                      tooltip: 'Retry location detection',
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
             // Optional location field
             TextField(
               controller: _locationController,
               decoration: InputDecoration(
-                hintText: 'Location (optional)',
+                hintText: 'Override location (optional)',
                 hintStyle: const TextStyle(color: AppColors.textSecondary),
                 filled: true,
                 fillColor: AppColors.card,
@@ -621,7 +745,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
                 ),
-                prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.textSecondary),
+                prefixIcon: const Icon(Icons.edit_location_outlined, color: AppColors.textSecondary),
               ),
             ),
             const SizedBox(height: 24),
@@ -768,8 +892,7 @@ class _CaseIDDialogContent extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                // TODO: Add logic for "I've Saved My Case ID"
-                Navigator.of(context).pop();
+                Navigator.of(context).pop(); // Just close the dialog, stay on report screen
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -793,6 +916,8 @@ class _CaseIDDialogContent extends StatelessWidget {
             width: double.infinity,
             child: OutlinedButton(
               onPressed: () {
+                // Close dialog first, then navigate to emergency exit
+                Navigator.of(context).pop();
                 Navigator.of(context).pushNamed('/emergency-exit');
               },
               style: OutlinedButton.styleFrom(

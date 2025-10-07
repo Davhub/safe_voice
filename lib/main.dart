@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:safe_voice/constants/app_colors.dart';
 import 'package:safe_voice/routing/app_router.dart';
 import 'package:safe_voice/routing/route_paths.dart';
+import 'package:safe_voice/services/enhanced_report_service.dart';
 
 import 'firebase_options.dart' show DefaultFirebaseOptions;
 
@@ -21,6 +22,14 @@ void main() async {
     } else {
       print('Firebase initialization error: $e');
     }
+  }
+  
+  // Initialize offline sync service
+  try {
+    await EnhancedReportService.startPeriodicSync();
+    print('Offline sync service initialized successfully');
+  } catch (e) {
+    print('Failed to initialize offline sync: $e');
   }
   
   runApp(const MyApp());

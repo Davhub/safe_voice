@@ -1,0 +1,30 @@
+// Updated Firebase Storage Rules for Safe Voice App
+// These rules should be applied to your Firebase Storage to fix audio playback issues
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow anonymous uploads to voice_reports folder
+    match /voice_reports/{caseId}/{filename} {
+      allow write: if true; // Allow anonymous uploads
+      allow read: if true;  // Allow reading uploaded files for playback
+    }
+    
+    // Allow anonymous uploads to attachments folder
+    match /attachments/{caseId}/{filename} {
+      allow write: if true; // Allow anonymous uploads
+      allow read: if true;  // Allow reading attachments
+    }
+    
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// Instructions:
+// 1. Go to Firebase Console -> Storage -> Rules
+// 2. Replace the existing rules with the above rules
+// 3. Click "Publish" to apply the changes
+// 4. This will allow your uploaded audio files to be playable/downloadable

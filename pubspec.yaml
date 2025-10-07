@@ -41,8 +41,9 @@ dependencies:
   firebase_storage: ^11.7.7
   
   # For generating anonymous case IDs and file handling
-  uuid: ^4.0.0
+  uuid: ^3.0.7
   path_provider: ^2.1.2
+  path: ^1.8.3
   
   # For voice recording functionality (temporarily disabled)
   # record: ^4.4.4
@@ -56,13 +57,21 @@ dependencies:
   
   # For improved UX and state management
   shared_preferences: ^2.2.2
-  connectivity_plus: ^5.0.1
+  connectivity_plus: ^5.0.2
   
-  # For location services
-  geolocator: ^12.0.0
+  # For location services (temporarily disabled due to compatibility)
+  # geolocator: ^10.1.0
+  # geocoding: ^2.1.1
   
   # For opening external URLs
   url_launcher: ^6.3.1
+  
+  # For offline storage
+  sqflite: ^2.3.3
+  
+  # For proper audio recording/playback (temporarily disabled due to compatibility)
+  # record: ^4.4.4
+  # audioplayers: ^4.1.0
 
 dev_dependencies:
   flutter_test:

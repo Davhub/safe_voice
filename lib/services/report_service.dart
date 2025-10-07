@@ -170,19 +170,22 @@ class ReportService {
       Reference ref = _storage.ref().child(storagePath);
       
       print('📤 Starting file upload...');
-      UploadTask uploadTask = ref.putFile(audioFile);
       
-      // Monitor upload progress
-      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-        double progress = snapshot.bytesTransferred / snapshot.totalBytes;
-        print('⏳ Upload progress: ${(progress * 100).toStringAsFixed(1)}%');
-      });
+      // Set metadata to ensure proper content type for audio files
+      SettableMetadata metadata = SettableMetadata(
+        contentType: _getContentType(audioFile.path),
+        customMetadata: {
+          'caseId': caseId,
+          'uploadTime': DateTime.now().toIso8601String(),
+        },
+      );
+      
+      UploadTask uploadTask = ref.putFile(audioFile, metadata);
       
       TaskSnapshot snapshot = await uploadTask;
       print('✅ Upload completed successfully');
       
-      // Try to get download URL, but if it fails due to read permissions,
-      // return a constructed URL instead
+      // Try to get download URL
       try {
         String downloadUrl = await snapshot.ref.getDownloadURL();
         print('🔗 Download URL: $downloadUrl');
@@ -190,7 +193,6 @@ class ReportService {
       } catch (urlError) {
         print('⚠️ Could not get download URL (likely due to read permissions): $urlError');
         // Return the storage path instead - this is fine for anonymous reports
-        // where we don't need to read the files back
         String constructedUrl = 'gs://${ref.bucket}/$storagePath';
         print('🔗 Using constructed storage reference: $constructedUrl');
         return constructedUrl;
@@ -205,8 +207,6 @@ class ReportService {
       if (errorMessage.contains('network') || errorMessage.contains('timeout')) {
         throw Exception('Network error during upload. Please check your internet connection.');
       } else if (errorMessage.contains('unauthorized') || errorMessage.contains('permission')) {
-        // If the upload itself failed due to permissions, that's a real error
-        // But if we got here, the upload succeeded and only URL retrieval failed
         throw Exception('Upload permission denied. Please update Firebase Storage rules.');
       } else if (errorMessage.contains('storage/quota-exceeded')) {
         throw Exception('Storage quota exceeded. Please contact support.');
@@ -221,6 +221,27 @@ class ReportService {
   /// Get file extension from path
   static String _getFileExtension(String path) {
     return path.split('.').last.toLowerCase();
+  }
+
+  /// Get content type for file upload
+  static String _getContentType(String path) {
+    String extension = _getFileExtension(path);
+    switch (extension) {
+      case 'm4a':
+        return 'audio/mp4'; // M4A uses audio/mp4 MIME type
+      case 'mp3':
+        return 'audio/mpeg';
+      case 'wav':
+        return 'audio/wav';
+      case 'aac':
+        return 'audio/aac';
+      case 'ogg':
+        return 'audio/ogg';
+      case 'webm':
+        return 'audio/webm';
+      default:
+        return 'audio/mp4'; // Default for our mock M4A files
+    }
   }
 
   /// Get anonymous statistics (for admin dashboard - no personal data)
