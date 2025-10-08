@@ -1,0 +1,213 @@
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+/// Service for handling location detection and geocoding
+class LocationService {
+  /// Check if location services are enabled on the device
+  static Future<bool> isLocationServiceEnabled() async {
+    try {
+      return await Geolocator.isLocationServiceEnabled();
+    } catch (e) {
+      print('Error checking location service: $e');
+      return false;
+    }
+  }
+
+  /// Check current location permission status
+  static Future<LocationPermission> checkLocationPermission() async {
+    try {
+      return await Geolocator.checkPermission();
+    } catch (e) {
+      print('Error checking location permission: $e');
+      return LocationPermission.denied;
+    }
+  }
+
+  /// Request location permission from user
+  static Future<LocationPermission> requestLocationPermission() async {
+    try {
+      return await Geolocator.requestPermission();
+    } catch (e) {
+      print('Error requesting location permission: $e');
+      return LocationPermission.denied;
+    }
+  }
+
+  /// Get current position with timeout and accuracy settings
+  static Future<Position?> getCurrentPosition() async {
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Location services are disabled');
+      }
+
+      // Check and request permissions
+      LocationPermission permission = await checkLocationPermission();
+      
+      if (permission == LocationPermission.denied) {
+        permission = await requestLocationPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Location permissions are denied');
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception('Location permissions are permanently denied');
+      }
+
+      // Get current position with optimized settings
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 10), // 10 second timeout
+      );
+
+      return position;
+    } catch (e) {
+      print('Error getting current position: $e');
+      return null;
+    }
+  }
+
+  /// Convert coordinates to human-readable address
+  static Future<String> getAddressFromCoordinates(double latitude, double longitude) async {
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        latitude, 
+        longitude
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks.first;
+        
+        // Build readable address from available components
+        List<String> addressParts = [];
+        
+        // Add street info if available
+        if (place.street != null && place.street!.isNotEmpty) {
+          addressParts.add(place.street!);
+        } else if (place.thoroughfare != null && place.thoroughfare!.isNotEmpty) {
+          addressParts.add(place.thoroughfare!);
+        }
+        
+        // Add locality (city/town)
+        if (place.locality != null && place.locality!.isNotEmpty) {
+          addressParts.add(place.locality!);
+        } else if (place.subAdministrativeArea != null && place.subAdministrativeArea!.isNotEmpty) {
+          addressParts.add(place.subAdministrativeArea!);
+        }
+        
+        // Add state/region
+        if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
+          addressParts.add(place.administrativeArea!);
+        }
+        
+        // Add country
+        if (place.country != null && place.country!.isNotEmpty) {
+          addressParts.add(place.country!);
+        }
+
+        // Join address parts
+        String address = addressParts.join(', ');
+        
+        // If we got a good address, return it
+        if (address.isNotEmpty && address.length > 5) {
+          return address;
+        } else {
+          // Fallback to coordinates if address is too short
+          return 'Lat: ${latitude.toStringAsFixed(6)}, Lng: ${longitude.toStringAsFixed(6)}';
+        }
+      } else {
+        // No placemark found, return coordinates
+        return 'Lat: ${latitude.toStringAsFixed(6)}, Lng: ${longitude.toStringAsFixed(6)}';
+      }
+    } catch (e) {
+      print('Error getting address from coordinates: $e');
+      // Return coordinates if geocoding fails
+      return 'Lat: ${latitude.toStringAsFixed(6)}, Lng: ${longitude.toStringAsFixed(6)}';
+    }
+  }
+
+  /// Get current location with human-readable address
+  static Future<String> getCurrentLocationAddress() async {
+    try {
+      Position? position = await getCurrentPosition();
+      
+      if (position != null) {
+        String address = await getAddressFromCoordinates(
+          position.latitude, 
+          position.longitude
+        );
+        
+        // Add accuracy info for transparency
+        String accuracyInfo = '';
+        if (position.accuracy > 0) {
+          accuracyInfo = ' (±${position.accuracy.toStringAsFixed(0)}m)';
+        }
+        
+        return '$address$accuracyInfo';
+      } else {
+        return 'Location unavailable';
+      }
+    } catch (e) {
+      print('Error getting current location address: $e');
+      return 'Location unavailable: ${e.toString()}';
+    }
+  }
+
+  /// Get location status for UI display
+  static Future<Map<String, dynamic>> getLocationStatus() async {
+    try {
+      bool serviceEnabled = await isLocationServiceEnabled();
+      LocationPermission permission = await checkLocationPermission();
+      
+      return {
+        'serviceEnabled': serviceEnabled,
+        'permission': permission.toString(),
+        'canGetLocation': serviceEnabled && 
+          (permission == LocationPermission.always || 
+           permission == LocationPermission.whileInUse),
+      };
+    } catch (e) {
+      return {
+        'serviceEnabled': false,
+        'permission': 'unknown',
+        'canGetLocation': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Open location settings for user to enable manually
+  static Future<void> openLocationSettings() async {
+    try {
+      await Geolocator.openLocationSettings();
+    } catch (e) {
+      print('Error opening location settings: $e');
+      // Fallback to app settings
+      await openAppSettings();
+    }
+  }
+
+  /// Format location status for user display
+  static String formatLocationStatus(Map<String, dynamic> status) {
+    if (!status['serviceEnabled']) {
+      return 'Location services disabled';
+    }
+    
+    String permission = status['permission'];
+    
+    switch (permission) {
+      case 'LocationPermission.denied':
+        return 'Location permission needed';
+      case 'LocationPermission.deniedForever':
+        return 'Location permission denied permanently';
+      case 'LocationPermission.whileInUse':
+      case 'LocationPermission.always':
+        return 'Location permission granted';
+      default:
+        return 'Location status unknown';
+    }
+  }
+}

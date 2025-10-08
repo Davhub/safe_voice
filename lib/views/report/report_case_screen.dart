@@ -4,6 +4,7 @@ import 'package:safe_voice/constant/colors.dart';
 import 'package:safe_voice/services/services.dart';
 import 'package:safe_voice/services/enhanced_report_service.dart';
 import 'package:safe_voice/services/audio_service.dart';
+import 'package:safe_voice/services/native_location_service.dart';
 
 class ReportCaseScreen extends StatefulWidget {
   final bool showBack;
@@ -86,19 +87,39 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
         _currentLocation = "Getting location...";
       });
 
-      // Mock location service - temporarily disabled due to package compatibility
-      await Future.delayed(Duration(seconds: 2)); // Simulate loading
+      // Request location permission first
+      bool hasPermission = await NativeLocationService.requestLocationPermission();
       
-      // Set a mock location
+      if (!hasPermission) {
+        setState(() {
+          _currentLocation = "Location permission denied";
+        });
+        return;
+      }
+
+      // Check if location services are enabled
+      bool isEnabled = await NativeLocationService.isLocationServiceEnabled();
+      
+      if (!isEnabled) {
+        setState(() {
+          _currentLocation = "Location services disabled";
+        });
+        return;
+      }
+
+      // Get current location with human-readable address
+      String locationAddress = await NativeLocationService.getCurrentLocationAddress();
+      
       setState(() {
-        _currentLocation = "Lagos, Nigeria (Mock Location - Development Mode)";
+        _currentLocation = locationAddress;
       });
       
-      print('✅ Mock location set: $_currentLocation');
+      print('✅ Location detected: $_currentLocation');
     } catch (e) {
       setState(() {
         _currentLocation = "Location unavailable: ${e.toString()}";
       });
+      print('❌ Location error: $e');
     }
   }
 
@@ -687,8 +708,9 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                            !_currentLocation!.contains('unavailable') && 
                            !_currentLocation!.contains('Getting location') &&
                            !_currentLocation!.contains('disabled') &&
-                           !_currentLocation!.contains('denied')
-                        ? (_currentLocation!.contains('Mock Location') ? AppColors.warning : AppColors.success)
+                           !_currentLocation!.contains('denied') &&
+                           !_currentLocation!.contains('permission')
+                        ? AppColors.success
                         : AppColors.error,
                     size: 20,
                   ),
@@ -719,15 +741,37 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                   if (_currentLocation != null && 
                       (_currentLocation!.contains('unavailable') || 
                        _currentLocation!.contains('disabled') || 
-                       _currentLocation!.contains('denied')))
-                    IconButton(
-                      onPressed: _getCurrentLocation,
-                      icon: const Icon(
-                        Icons.refresh,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                      tooltip: 'Retry location detection',
+                       _currentLocation!.contains('denied') ||
+                       _currentLocation!.contains('permission')))
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: _getCurrentLocation,
+                          icon: const Icon(
+                            Icons.refresh,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                          tooltip: 'Retry location detection',
+                        ),
+                        if (_currentLocation!.contains('permission') || 
+                            _currentLocation!.contains('disabled'))
+                          IconButton(
+                            onPressed: () async {
+                              await NativeLocationService.openLocationSettings();
+                              // Retry after settings
+                              Future.delayed(Duration(seconds: 1), () {
+                                _getCurrentLocation();
+                              });
+                            },
+                            icon: const Icon(
+                              Icons.settings,
+                              color: AppColors.warning,
+                              size: 20,
+                            ),
+                            tooltip: 'Open location settings',
+                          ),
+                      ],
                     ),
                 ],
               ),

@@ -59,9 +59,8 @@ dependencies:
   shared_preferences: ^2.2.2
   connectivity_plus: ^5.0.2
   
-  # For location services (temporarily disabled due to compatibility)
-  # geolocator: ^10.1.0
-  # geocoding: ^2.1.1
+  # Location services implemented natively to avoid plugin compatibility issues
+  # Native method channels used for GPS location detection
   
   # For opening external URLs
   url_launcher: ^6.3.1

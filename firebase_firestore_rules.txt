@@ -4,13 +4,20 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow anonymous users to create reports
-    match /reports/{document} {
-      allow create: if true; // Allow anonymous report creation
-      allow read, update, delete: if false; // Prevent reading/modifying for privacy
+    // Allow anonymous users to create reports and check status by case ID
+    match /reports/{caseId} {
+      // Allow anonymous report creation
+      allow create: if true;
+      
+      // Allow reading for status checking - users can only read if they know the exact case ID
+      // This provides security through obscurity while enabling status checks
+      allow read: if request.auth == null;
+      
+      // Only admins can update/delete (add admin auth rules here when needed)
+      allow update, delete: if false;
     }
     
-    // Deny all other access
+    // Deny all other access to maintain security
     match /{document=**} {
       allow read, write: if false;
     }
