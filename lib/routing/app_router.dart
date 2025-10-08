@@ -37,6 +37,26 @@ class AppRouter {
   static PageRoute _build(RouteSettings s, Widget child) => MaterialPageRoute(settings: s, builder: (_) => child);
 }
 
+/// Navigation controller for tab switching
+class TabNavigationProvider extends InheritedWidget {
+  final Function(int) switchToTab;
+  
+  const TabNavigationProvider({
+    Key? key,
+    required this.switchToTab,
+    required Widget child,
+  }) : super(key: key, child: child);
+  
+  static TabNavigationProvider? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<TabNavigationProvider>();
+  }
+  
+  @override
+  bool updateShouldNotify(TabNavigationProvider oldWidget) {
+    return false;
+  }
+}
+
 /// Shell widget that hosts bottom navigation and maintains state of tabs.
 class MainShell extends StatefulWidget {
   final int initialIndex;
@@ -69,11 +89,14 @@ class _MainShellState extends State<MainShell> {
   Widget _buildTabNavigator(int index, Widget child) {
     return Offstage(
       offstage: _currentIndex != index,
-      child: Navigator(
-        key: _navigatorKeys[index],
-        onGenerateRoute: (routeSettings) => MaterialPageRoute(
-          builder: (_) => child,
-          settings: routeSettings,
+      child: TabNavigationProvider(
+        switchToTab: _onTap,
+        child: Navigator(
+          key: _navigatorKeys[index],
+          onGenerateRoute: (routeSettings) => MaterialPageRoute(
+            builder: (_) => child,
+            settings: routeSettings,
+          ),
         ),
       ),
     );

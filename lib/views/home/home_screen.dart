@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:safe_voice/constant/api_routes.dart';
 import 'package:safe_voice/views/views.dart';
 import 'package:safe_voice/constant/colors.dart';
+import 'package:safe_voice/routing/app_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -69,10 +70,10 @@ class HomeScreen extends StatelessWidget {
                   subtitle: 'Submit an anonymous report',
                   color: AppColors.primary,
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ReportCaseScreen()),
-                    );
+                    final tabNav = TabNavigationProvider.of(context);
+                    if (tabNav != null) {
+                      tabNav.switchToTab(1); // Switch to Report tab (index 1)
+                    }
                   },
                 ),
                 
@@ -83,10 +84,10 @@ class HomeScreen extends StatelessWidget {
                   subtitle: 'Information and Resources',
                   color: AppColors.secondary,
                   onTap: () {
-                    Navigator.push(
-                      context, 
-                      MaterialPageRoute(builder: (context) => const LearnScreen()),
-                    );
+                    final tabNav = TabNavigationProvider.of(context);
+                    if (tabNav != null) {
+                      tabNav.switchToTab(2); // Switch to Learn tab (index 2)
+                    }
                   },
                 ),
                 
@@ -167,7 +168,8 @@ class HomeScreen extends StatelessWidget {
                         icon: Icons.message,
                         label: 'Text Help',
                         onTap: () async {
-                          await _launchURL('sms:+2348032386064', context);
+                          // Open WhatsApp with pre-filled message
+                          await _launchURL('https://wa.me/2348032386064?text=Hello%2C%20I%20need%20help%20regarding%20FGM%20support.', context);
                         },
                       ),
                       _buildQuickActionButton(
@@ -494,39 +496,6 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  /// Build statistic item for community impact section
-  Widget _buildStatItem(String label, String value, IconData icon) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: AppColors.primary, size: 24),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
     );
   }
 
