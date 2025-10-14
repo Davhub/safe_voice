@@ -39,6 +39,7 @@ dependencies:
   firebase_core: ^2.32.0
   cloud_firestore: ^4.17.5
   firebase_storage: ^11.7.7
+  firebase_auth: ^4.4.0
   
   # For generating anonymous case IDs and file handling
   uuid: ^3.0.7
@@ -67,6 +68,7 @@ dependencies:
   
   # For offline storage
   sqflite: ^2.3.3
+  intl: ^0.20.2
   
   # For proper audio recording/playback (temporarily disabled due to compatibility)
   # record: ^4.4.4

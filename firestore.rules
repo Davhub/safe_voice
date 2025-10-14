@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Reports collection: anyone can read/create (adjust as needed).
+    match /reports/{reportId} {
+      allow read: if true;
+      allow create: if true;
+
+      // Only authenticated users listed in /admins/{uid} can update or delete reports.
+      allow update, delete: if request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Admins collection: only existing admins may read admin docs.
+    match /admins/{adminId} {
+      allow read: if request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      // Creation of admin documents should be done via the Console or secure server-side tooling.
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Default: deny everything else.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
