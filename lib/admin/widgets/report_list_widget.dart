@@ -51,28 +51,18 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildEnhancedHeader(),
-          const SizedBox(height: 20),
-          _buildAdvancedFiltersAndSearch(),
-          const SizedBox(height: 20),
-          _buildStatsOverview(),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: screenWidth < 768 
-                ? screenHeight * 0.7  // Mobile/tablet
-                : screenHeight * 0.6, // Desktop
-            child: _buildReportsList(),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildEnhancedHeader(),
+        const SizedBox(height: 20),
+        _buildAdvancedFiltersAndSearch(),
+        const SizedBox(height: 20),
+        _buildStatsOverview(),
+        const SizedBox(height: 20),
+        // Make the reports list take only the space it needs
+        _buildReportsList(),
+      ],
     );
   }
 
@@ -606,9 +596,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
               ),
               
               // List content
-              Expanded(
-                child: _isGridView ? _buildGridView(docs) : _buildTableView(docs),
-              ),
+              _isGridView ? _buildGridView(docs) : _buildTableView(docs),
             ],
           ),
         );
@@ -618,6 +606,8 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
 
   Widget _buildTableView(List<QueryDocumentSnapshot> docs) {
     return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: docs.length,
       separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey[200]),
       itemBuilder: (context, index) => _buildEnhancedTableRow(docs[index]),
@@ -790,6 +780,8 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
     return Padding(
       padding: const EdgeInsets.all(16),
       child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
           mainAxisSpacing: 16,

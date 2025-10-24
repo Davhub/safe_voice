@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:safe_voice/admin/services/admin_report_service.dart';
+import 'package:safe_voice/admin/widgets/report_list_widget.dart';
 import 'package:safe_voice/constant/colors.dart';
 
 class DashboardStatsWidget extends StatefulWidget {
@@ -324,7 +325,9 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget> with Ticker
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  ReportListWidget();
+                },
                 child: const Text('View All'),
               ),
             ],

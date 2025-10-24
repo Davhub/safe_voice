@@ -27,11 +27,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
       description: 'Dashboard & Statistics',
     ),
     NavigationItem(
-      icon: Icons.people_rounded,
-      label: 'User Management',
-      description: 'Manage system users',
-    ),
-    NavigationItem(
       icon: Icons.notifications_active_rounded,
       label: 'Alert Management',
       description: 'Monitor active alerts',
@@ -131,6 +126,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                           _buildPageTitle(),
                           const SizedBox(height: 20),
                           _buildMainContent(),
+                          const SizedBox(height: 50), // Bottom spacing
                         ],
                       ),
                     ),
@@ -361,13 +357,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
         ),
         const SizedBox(width: 20),
         
-        // Quick Actions
-        _buildQuickActionButton(
-          icon: Icons.add_rounded,
-          label: 'New Report',
-          onTap: () {},
-        ),
-        const SizedBox(width: 12),
+        // // Quick Actions
+        // _buildQuickActionButton(
+        //   icon: Icons.add_rounded,
+        //   label: 'New Report',
+        //   onTap: () {},
+        // ),
+        // const SizedBox(width: 12),
         
         // Notifications
         Container(
@@ -478,33 +474,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
     switch (_selectedIndex) {
       case 0: // Overview
         return const DashboardStatsWidget();
-      case 1: // User Management
-        return _buildComingSoonWidget('User Management');
-      case 2: // Alert Management
-        return Container(
-          height: MediaQuery.of(context).size.height - 200,
-          child: const AlertManagementWidget(),
-        );
-      case 3: // All Reports
-        return Container(
-          height: MediaQuery.of(context).size.height - 200,
-          child: const ReportListWidget(),
-        );
-      case 4: // Pending Review
-        return Container(
-          height: MediaQuery.of(context).size.height - 200,
-          child: const ReportListWidget(status: 'submitted'),
-        );
-      case 5: // Resolved
-        return Container(
-          height: MediaQuery.of(context).size.height - 200,
-          child: const ReportListWidget(status: 'resolved'),
-        );
-      case 6: // Messages
+      case 1: // Alert Management
+        return const AlertManagementWidget();
+      case 2: // All Reports
+        return const ReportListWidget();
+      case 3: // Pending Review
+        return const ReportListWidget(status: 'submitted');
+      case 4: // Resolved
+        return const ReportListWidget(status: 'resolved');
+      case 5: // Messages
         return _buildComingSoonWidget('Messages');
-      case 7: // Analytics
+      case 6: // Analytics
         return _buildComingSoonWidget('Analytics');
-      case 8: // Settings
+      case 7: // Settings
         return _buildComingSoonWidget('Settings');
       default:
         return const DashboardStatsWidget();

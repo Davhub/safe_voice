@@ -17,8 +17,6 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
   String _selectedPriority = 'all';
   String _selectedStatus = 'all';
   String _selectedType = 'all';
-  String _sortBy = 'date';
-  bool _sortAscending = false;
   
   late AnimationController _refreshAnimationController;
   late Animation<double> _refreshAnimation;
@@ -44,28 +42,17 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildAlertHeader(),
-          const SizedBox(height: 24),
-          _buildFilterSection(),
-          const SizedBox(height: 24),
-          _buildQuickStats(),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: screenWidth < 768 
-                ? screenHeight * 0.7  // Mobile/tablet
-                : screenHeight * 0.6, // Desktop
-            child: _buildAlertsList(),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildAlertHeader(),
+        const SizedBox(height: 24),
+        _buildFilterSection(),
+        const SizedBox(height: 24),
+        _buildQuickStats(),
+        const SizedBox(height: 24),
+        _buildAlertsList(),
+      ],
     );
   }
 
@@ -426,13 +413,13 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
               ),
               
               // List
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: docs.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) => _buildAlertCard(docs[index]),
-                ),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                itemCount: docs.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                itemBuilder: (context, index) => _buildAlertCard(docs[index]),
               ),
             ],
           ),
