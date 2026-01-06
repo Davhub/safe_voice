@@ -11,11 +11,19 @@ class EnhancedReportService {
   /// Quick connectivity check with timeout
   static Future<bool> _quickConnectivityCheck() async {
     try {
-      var connectivityResult = await Connectivity().checkConnectivity()
+      final dynamic connectivityResult = await Connectivity().checkConnectivity()
           .timeout(Duration(seconds: 2));
-      return connectivityResult != ConnectivityResult.none;
+      
+      // Handle both single value and list of values
+      if (connectivityResult is List) {
+        final results = connectivityResult.cast<ConnectivityResult>();
+        return results.any((result) => result != ConnectivityResult.none);
+      } else {
+        // Legacy single value support
+        return connectivityResult != ConnectivityResult.none;
+      }
     } catch (e) {
-      print('Quick connectivity check failed: $e');
+      print('❌ Quick connectivity check failed: $e');
       return false; // Assume offline if check fails
     }
   }
@@ -258,11 +266,26 @@ class EnhancedReportService {
     await _syncPendingReports();
     
     // Listen for connectivity changes  
-    Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
-      if (result == ConnectivityResult.mobile || 
-          result == ConnectivityResult.wifi ||
-          result == ConnectivityResult.ethernet) {
-        print('Network reconnected, starting sync...');
+    Connectivity().onConnectivityChanged.listen((dynamic result) {
+      print('🔄 Connectivity changed: $result');
+      
+      // Handle both single value and list of values
+      bool isConnected = false;
+      if (result is List) {
+        final results = result.cast<ConnectivityResult>();
+        isConnected = results.any((r) => 
+          r == ConnectivityResult.mobile || 
+          r == ConnectivityResult.wifi ||
+          r == ConnectivityResult.ethernet
+        );
+      } else {
+        isConnected = result == ConnectivityResult.mobile || 
+                     result == ConnectivityResult.wifi ||
+                     result == ConnectivityResult.ethernet;
+      }
+      
+      if (isConnected) {
+        print('✅ Network reconnected, starting sync...');
         _syncPendingReports();
       }
     });
@@ -293,19 +316,39 @@ class EnhancedReportService {
   static Future<bool> isOnline() async {
     return await OfflineStorageService.isOnline();
   }
-
   /// Get connectivity status string for UI
   static Future<String> getConnectivityStatus() async {
-    var connectivityResult = await Connectivity().checkConnectivity();
-    
-    if (connectivityResult == ConnectivityResult.wifi) {
-      return 'WiFi';
-    } else if (connectivityResult == ConnectivityResult.mobile) {
-      return 'Mobile Data';
-    } else if (connectivityResult == ConnectivityResult.ethernet) {
-      return 'Ethernet';
-    } else {
-      return 'Offline';
+    try {
+      final dynamic connectivityResult = await Connectivity().checkConnectivity();
+      
+      // Handle both single value and list of values
+      if (connectivityResult is List) {
+        final results = connectivityResult.cast<ConnectivityResult>();
+        if (results.any((r) => r == ConnectivityResult.wifi)) {
+          return 'WiFi';
+        } else if (results.any((r) => r == ConnectivityResult.mobile)) {
+          return 'Mobile Data';
+        } else if (results.any((r) => r == ConnectivityResult.ethernet)) {
+          return 'Ethernet';
+        } else {
+          return 'Offline';
+        }
+      } else {
+        // Legacy single value support
+        if (connectivityResult == ConnectivityResult.wifi) {
+          return 'WiFi';
+        } else if (connectivityResult == ConnectivityResult.mobile) {
+          return 'Mobile Data';
+        } else if (connectivityResult == ConnectivityResult.ethernet) {
+          return 'Ethernet';
+        } else {
+          return 'Offline';
+        }
+      }
+    } catch (e) {
+      print('❌ Error getting connectivity status: $e');
+      return 'Unknown';
     }
   }
 }
+

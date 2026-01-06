@@ -131,12 +131,24 @@ class OfflineStorageService {
   /// Check if device is online  
   static Future<bool> isOnline() async {
     try {
-      ConnectivityResult connectivityResult = await Connectivity().checkConnectivity();
+      final dynamic connectivityResult = await Connectivity().checkConnectivity();
       
-      return connectivityResult == ConnectivityResult.mobile || 
-             connectivityResult == ConnectivityResult.wifi ||
-             connectivityResult == ConnectivityResult.ethernet;
+      // Handle both single value and list of values
+      if (connectivityResult is List) {
+        final results = connectivityResult.cast<ConnectivityResult>();
+        return results.any((r) => 
+          r == ConnectivityResult.mobile || 
+          r == ConnectivityResult.wifi ||
+          r == ConnectivityResult.ethernet
+        );
+      } else {
+        // Legacy single value support
+        return connectivityResult == ConnectivityResult.mobile || 
+               connectivityResult == ConnectivityResult.wifi ||
+               connectivityResult == ConnectivityResult.ethernet;
+      }
     } catch (e) {
+      print('❌ Connectivity check error: $e');
       // If connectivity check fails, assume offline
       return false;
     }

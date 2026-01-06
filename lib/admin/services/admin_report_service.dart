@@ -1,18 +1,28 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:safe_voice/admin/services/admin_notification_service.dart';
+import 'package:safe_voice/admin/services/admin_activity_service.dart';
 
 class AdminReportService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  static Stream<QuerySnapshot> getReportsStream({String? status, int limit = 50, DocumentSnapshot? startAfter}) {
+  static Stream<QuerySnapshot> getReportsStream({String? status, int limit = 100, DocumentSnapshot? startAfter}) {
     try {
       Query query = _firestore.collection('reports');
       
       // Apply status filter if provided
       if (status != null && status.isNotEmpty) {
         query = query.where('status', isEqualTo: status);
+      }
+      
+      // Order by submission date (most recent first)
+      query = query.orderBy('submittedAt', descending: true);
+      
+      // Apply pagination if startAfter is provided
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
       }
       
       // Apply limit
@@ -23,6 +33,23 @@ class AdminReportService {
       debugPrint('Error in getReportsStream: $e');
       // Return an empty stream in case of error
       return const Stream.empty();
+    }
+  }
+  
+  /// Get total report count (for accurate statistics)
+  static Future<int> getTotalReportCount({String? status}) async {
+    try {
+      Query query = _firestore.collection('reports');
+      
+      if (status != null && status.isNotEmpty) {
+        query = query.where('status', isEqualTo: status);
+      }
+      
+      final snapshot = await query.count().get();
+      return snapshot.count ?? 0;
+    } catch (e) {
+      debugPrint('Error getting report count: $e');
+      return 0;
     }
   }
 
@@ -37,31 +64,120 @@ class AdminReportService {
 
   static Future<bool> updateReportStatus({required String caseId, required String status, String? statusMessage, String? adminId, DateTime? estimatedResolution}) async {
     try {
+      print('📝 Updating report status: caseId=$caseId, status=$status');
+      print('🔑 Admin ID: $adminId');
+      
+      // Get current status before updating
+      DocumentSnapshot doc = await _firestore.collection('reports').doc(caseId).get();
+      
+      if (!doc.exists) {
+        print('❌ Report document not found: $caseId');
+        throw Exception('Report not found');
+      }
+      
+      String? oldStatus;
+      final data = doc.data() as Map<String, dynamic>?;
+      oldStatus = data?['status'];
+      print('📊 Current status: $oldStatus → New status: $status');
+      
+      // Use Timestamp.now() for immediate client updates
+      final now = Timestamp.now();
+      
       Map<String, dynamic> updateData = {
         'status': status,
-        'last_updated': FieldValue.serverTimestamp(),
+        'lastUpdated': now, // Use Timestamp.now() for immediate real-time updates
+        'last_updated': now, // Keep for consistency with snake_case
         'admin_updated_by': adminId,
       };
-      if (statusMessage != null) updateData['status_message'] = statusMessage;
+      if (statusMessage != null) updateData['statusMessage'] = statusMessage;
+      if (statusMessage != null) updateData['status_message'] = statusMessage; // Keep both for compatibility
       if (estimatedResolution != null) updateData['estimated_resolution'] = Timestamp.fromDate(estimatedResolution);
 
+      // Note: serverTimestamp() cannot be used inside arrayUnion(), so we use Timestamp.now()
       updateData['status_history'] = FieldValue.arrayUnion([
-        {'status': status, 'timestamp': FieldValue.serverTimestamp(), 'admin_id': adminId, 'message': statusMessage}
+        {
+          'status': status, 
+          'timestamp': now, 
+          'admin_id': adminId, 
+          'message': statusMessage
+        }
       ]);
 
+      print('📤 Attempting Firestore update...');
       await _firestore.collection('reports').doc(caseId).update(updateData);
+      print('✅ Report status updated successfully in Firestore');
+      
+      // Log activity for Recent Activities section
+      if (oldStatus != null && oldStatus != status) {
+        try {
+          await AdminActivityService.logReportStatusChange(
+            caseId,
+            oldStatus,
+            status,
+            adminId ?? 'admin',
+          );
+          print('📝 Activity logged for status change');
+        } catch (activityError) {
+          print('⚠️ Failed to log activity (non-critical): $activityError');
+        }
+      }
+      
+      // Create notification for status change
+      if (oldStatus != null && oldStatus != status) {
+        try {
+          await AdminNotificationService.createStatusChangeNotification(
+            caseId,
+            oldStatus,
+            status,
+          );
+          print('📬 Status change notification created');
+        } catch (notificationError) {
+          print('⚠️ Failed to create notification (non-critical): $notificationError');
+        }
+      }
+      
       return true;
-    } catch (e) {
-      return false;
+    } catch (e, stackTrace) {
+      print('❌ Error updating report status: $e');
+      print('Stack trace: $stackTrace');
+      rethrow; // Re-throw to let caller handle the error
     }
   }
 
   static Future<String?> getAudioDownloadUrl(String caseId) async {
     try {
+      // First, try to get the audio URL directly from Firestore
+      DocumentSnapshot doc = await _firestore.collection('reports').doc(caseId).get();
+      if (doc.exists) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        
+        // Check if audioUrl field exists (user app uses 'audioUrl' not 'audio_url')
+        if (data['audioUrl'] != null && data['audioUrl'].toString().isNotEmpty) {
+          String audioUrl = data['audioUrl'];
+          
+          // If it's already a download URL, return it
+          if (audioUrl.startsWith('http')) {
+            return audioUrl;
+          }
+          
+          // If it's a gs:// URL, convert it to download URL
+          if (audioUrl.startsWith('gs://')) {
+            try {
+              String path = audioUrl.replaceFirst(RegExp(r'gs://[^/]+/'), '');
+              return await _storage.ref(path).getDownloadURL();
+            } catch (e) {
+              print('Error converting gs:// URL: $e');
+            }
+          }
+        }
+      }
+      
+      // Fallback: Try to construct the path from caseId
       String path = 'voice_reports/$caseId/${caseId}_voice_report.m4a';
       String downloadUrl = await _storage.ref(path).getDownloadURL();
       return downloadUrl;
     } catch (e) {
+      print('Error getting audio download URL: $e');
       return null;
     }
   }
@@ -81,16 +197,41 @@ class AdminReportService {
 
   static Future<Map<String, int>> getReportsStatistics() async {
     try {
-      QuerySnapshot allReports = await _firestore.collection('reports').get();
-      Map<String, int> stats = {'total': allReports.docs.length, 'submitted': 0, 'under_review': 0, 'investigating': 0, 'resolved': 0, 'requires_follow_up': 0, 'closed': 0};
-      for (var doc in allReports.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        String status = data['status'] ?? 'submitted';
-        stats[status] = (stats[status] ?? 0) + 1;
-      }
+      // Use count() aggregation for better performance and accuracy
+      final totalCount = await _firestore.collection('reports').count().get();
+      final submittedCount = await _firestore.collection('reports').where('status', isEqualTo: 'submitted').count().get();
+      final underReviewCount = await _firestore.collection('reports').where('status', isEqualTo: 'under_review').count().get();
+      final resolvedCount = await _firestore.collection('reports').where('status', isEqualTo: 'resolved').count().get();
+      
+      // Calculate start of current week (Sunday)
+      final now = DateTime.now();
+      final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
+      final weekStart = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+      final weekStartTimestamp = Timestamp.fromDate(weekStart);
+      
+      // Count reports from this week
+      final thisWeekCount = await _firestore
+          .collection('reports')
+          .where('submittedAt', isGreaterThan: weekStartTimestamp)
+          .count()
+          .get();
+      
+      // Initialize all status counters
+      Map<String, int> stats = {
+        'total': totalCount.count ?? 0,
+        'submitted': submittedCount.count ?? 0,
+        'pending': (submittedCount.count ?? 0) + (underReviewCount.count ?? 0),
+        'under_review': underReviewCount.count ?? 0,
+        'resolved': resolvedCount.count ?? 0,
+        'thisWeek': thisWeekCount.count ?? 0,
+      };
+      
+      print('📊 Report Statistics: Total=${stats['total']}, Pending=${stats['pending']}, Resolved=${stats['resolved']}');
+      
       return stats;
     } catch (e) {
-      return {'total': 0};
+      print('❌ Error getting report statistics: $e');
+      return {'total': 0, 'pending': 0, 'resolved': 0, 'thisWeek': 0};
     }
   }
 

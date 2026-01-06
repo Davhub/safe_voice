@@ -49,5 +49,7 @@
 	<string>This app needs location access to report incidents accurately with location information.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>This app needs location access to report incidents accurately with location information.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs microphone access to record voice reports for incident reporting.</string>
 </dict>
 </plist>

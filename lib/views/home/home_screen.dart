@@ -112,13 +112,9 @@ class HomeScreen extends StatelessWidget {
                   subtitle: 'For Counselling and Psychosocial support',
                   color: AppColors.primary,
                   onTap: () async {
-                    final Uri url = Uri.parse("${ApiRoute.webUrl}/contact-us");
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(url, mode: LaunchMode.externalApplication);
-                    } else {
-                      throw "Could not launch $url";
-                    }
-                  },
+                          // Open WhatsApp with pre-filled message
+                          await _launchURL('https://wa.me/2348032386064?text=Hello%2C%20I%20need%20help%20regarding%20FGM%20support.', context);
+                        },
                 ),
               ],
             ),

@@ -31,29 +31,4 @@ class AppConstants {
   static const double borderRadius = 8.0;
   static const double padding = 16.0;
   static const double margin = 8.0;
-  
-  // Privacy and Security
-  static const String privacyNotice = 'Your report is completely anonymous. We do not collect any personal information that could identify you.';
-  static const String securityNotice = 'All communications are encrypted and stored securely.';
-  
-  // Contact Information (for emergencies)
-  static const String emergencyNumber = '911';
-  static const String supportEmail = 'support@safevoice.org';
-  
-  // Error Messages
-  static const String genericErrorMessage = 'Something went wrong. Please try again.';
-  static const String networkErrorMessage = 'Network error. Please check your connection and try again.';
-  static const String fileUploadErrorMessage = 'Failed to upload file. Please try again.';
-  static const String reportSubmissionErrorMessage = 'Failed to submit report. Please try again.';
-  
-  // Success Messages
-  static const String reportSubmittedMessage = 'Your report has been submitted successfully.';
-  static const String reportFoundMessage = 'Report status found.';
-  
-  // Validation Messages
-  static const String requiredFieldMessage = 'This field is required.';
-  static const String invalidCaseIdMessage = 'Please enter a valid case ID.';
-  static const String reportTooLongMessage = 'Report exceeds maximum length.';
-  static const String fileTooLargeMessage = 'File size exceeds maximum allowed size.';
-  static const String invalidFileTypeMessage = 'File type not supported.';
 }

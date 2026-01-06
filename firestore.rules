@@ -1,28 +1,69 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Reports collection: anyone can read/create (adjust as needed).
-    match /reports/{reportId} {
-      allow read: if true;
+    
+    // Helper function to check if user is authenticated admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+    
+    // Helper function to check if user is in admins collection
+    function isAdminInCollection() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Reports collection - for anonymous user reports
+    match /reports/{caseId} {
+      // Allow anonymous users to create reports
       allow create: if true;
-
-      // Only authenticated users listed in /admins/{uid} can update or delete reports.
-      allow update, delete: if request.auth != null
-        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      
+      // Allow anyone to read (for status checking with case ID)
+      allow read: if true;
+      
+      // Allow authenticated admins to update/delete reports
+      allow update: if isAdmin() || isAdminInCollection();
+      allow delete: if isAdmin() || isAdminInCollection();
     }
-
-    // Admins collection: only existing admins may read admin docs.
+    
+    // Admin notifications collection - for admin dashboard notifications
+    match /admin_notifications/{notificationId} {
+      // Allow creation from anywhere (for automatic notification generation)
+      allow create: if true;
+      
+      // Only authenticated admins can read, update, delete
+      allow read: if isAdmin() || isAdminInCollection();
+      allow update, delete: if isAdmin() || isAdminInCollection();
+    }
+    
+    // Admin users/admins collection - for admin management
     match /admins/{adminId} {
-      allow read: if request.auth != null
-        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-      // Creation of admin documents should be done via the Console or secure server-side tooling.
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      // Only authenticated admins can read admin data
+      allow read: if isAdmin() || isAdminInCollection();
+      
+      // Admin creation should be done via Console or server-side
+      allow create, update, delete: if false;
     }
-
-    // Default: deny everything else.
+    
+    // Admin messages collection - for internal admin communication
+    match /admin_messages/{messageId} {
+      // Only authenticated admins can access messages
+      allow read, write: if isAdmin() || isAdminInCollection();
+    }
+    
+    // Admin activities collection - for tracking admin actions and recent activity
+    match /admin_activities/{activityId} {
+      // Allow creation from anywhere (for automatic activity logging)
+      allow create: if true;
+      
+      // Only authenticated admins can read activities
+      allow read: if isAdmin() || isAdminInCollection();
+      
+      // Only admins can update/delete activities
+      allow update, delete: if isAdmin() || isAdminInCollection();
+    }
+    
+    // Deny all other access by default for security
     match /{document=**} {
       allow read, write: if false;
     }

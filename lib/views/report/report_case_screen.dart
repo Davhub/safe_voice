@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:safe_voice/constant/colors.dart';
 import 'package:safe_voice/services/services.dart';
 import 'package:safe_voice/services/enhanced_report_service.dart';
@@ -52,6 +53,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
         // Update state for real-time validation if needed
       });
     });
+
   }
 
   /// Check network status
@@ -491,7 +493,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                 children: [
                   Icon(
                     _isRecording ? Icons.mic : Icons.mic_none,
-                    size: 80,
+                    size: 100,
                     color: _isRecording ? AppColors.error : AppColors.primary,
                   ),
                   const SizedBox(height: 16),
@@ -526,14 +528,14 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
                         ),
                         child: const Text(
                           'Start Recording',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textOnPrimary,
                           ),
@@ -647,7 +649,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 32),
             // Divider
             Row(
               children: const [
@@ -665,7 +667,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                 Expanded(child: Divider(color: AppColors.textSecondary)),
               ],
             ),
-            // const SizedBox(height: 20),
+            const SizedBox(height: 32),
             // Text Field Section
             const Text(
               'Type your report below:',
@@ -869,13 +871,45 @@ void showCaseIDDialog(BuildContext context, String caseID) {
   );
 }
 
-class _CaseIDDialogContent extends StatelessWidget {
+class _CaseIDDialogContent extends StatefulWidget {
   final String caseID;
 
   const _CaseIDDialogContent({
     Key? key,
     required this.caseID,
   }) : super(key: key);
+
+  @override
+  State<_CaseIDDialogContent> createState() => _CaseIDDialogContentState();
+}
+
+class _CaseIDDialogContentState extends State<_CaseIDDialogContent> {
+  bool _isCopied = false;
+
+  void _copyCaseID() async {
+    await Clipboard.setData(ClipboardData(text: widget.caseID));
+    setState(() {
+      _isCopied = true;
+    });
+    
+    // Show a snackbar confirmation
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Case ID copied to clipboard!'),
+        backgroundColor: AppColors.primary,
+        duration: Duration(seconds: 2),
+      ),
+    );
+    
+    // Reset the copied state after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _isCopied = false;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -907,28 +941,51 @@ class _CaseIDDialogContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Text(
-              caseID,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
+          GestureDetector(
+            onTap: _copyCaseID,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _isCopied ? AppColors.primary : AppColors.primary.withOpacity(0.3),
+                  width: 2,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      widget.caseID,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(
+                    _isCopied ? Icons.check_circle : Icons.copy,
+                    color: _isCopied ? AppColors.textSecondary : AppColors.textSecondary,
+                    size: 24,
+                  ),
+                ],
               ),
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Save this code to follow up on your report later',
+          Text(
+            _isCopied 
+                ? '✓ Case ID copied! Save it in a safe place'
+                : 'Tap the Case ID to copy it to clipboard',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
-              color: AppColors.textSecondary,
+              color: _isCopied ? AppColors.textSecondary : AppColors.textSecondary,
+              fontWeight: _isCopied ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
           const SizedBox(height: 24),
@@ -956,31 +1013,31 @@ class _CaseIDDialogContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {
-                // Close dialog first, then navigate to emergency exit
-                Navigator.of(context).pop();
-                Navigator.of(context).pushNamed('/emergency-exit');
-              },
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.error, width: 2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: const Text(
-                'Quick Exit',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.error,
-                ),
-              ),
-            ),
-          ),
+          // SizedBox(
+          //   width: double.infinity,
+          //   child: OutlinedButton(
+          //     onPressed: () {
+          //       // Close dialog first, then navigate to emergency exit
+          //       Navigator.of(context).pop();
+          //       Navigator.of(context).pushNamed('/emergency-exit');
+          //     },
+          //     style: OutlinedButton.styleFrom(
+          //       side: const BorderSide(color: AppColors.error, width: 2),
+          //       shape: RoundedRectangleBorder(
+          //         borderRadius: BorderRadius.circular(16),
+          //       ),
+          //       padding: const EdgeInsets.symmetric(vertical: 16),
+          //     ),
+          //     child: const Text(
+          //       'Quick Exit',
+          //       style: TextStyle(
+          //         fontSize: 18,
+          //         fontWeight: FontWeight.bold,
+          //         color: AppColors.error,
+          //       ),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );

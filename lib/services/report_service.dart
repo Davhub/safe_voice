@@ -39,6 +39,26 @@ class ReportService {
           .doc(caseId)
           .set(reportData);
 
+      // Create admin notification
+      try {
+        await _firestore.collection('admin_notifications').add({
+          'type': 'report_submitted',
+          'title': 'New Text Report',
+          'message': 'A new text report has been submitted',
+          'reportId': caseId,
+          'priority': 'normal',
+          'isRead': false,
+          'createdAt': FieldValue.serverTimestamp(),
+          'data': {
+            'reportType': 'text',
+            'location': location,
+            'status': 'submitted',
+          },
+        });
+      } catch (notificationError) {
+        print('⚠️ Failed to create notification (non-critical): $notificationError');
+      }
+
       return caseId;
     } catch (e) {
       throw Exception('Failed to submit report: $e');
@@ -91,6 +111,27 @@ class ReportService {
           .collection('reports')
           .doc(caseId)
           .set(reportData);
+
+      // Create admin notification
+      try {
+        await _firestore.collection('admin_notifications').add({
+          'type': 'report_submitted',
+          'title': 'New Voice Report',
+          'message': 'A new voice report has been submitted',
+          'reportId': caseId,
+          'priority': 'normal',
+          'isRead': false,
+          'createdAt': FieldValue.serverTimestamp(),
+          'data': {
+            'reportType': 'voice',
+            'location': location,
+            'status': 'submitted',
+          },
+        });
+        print('📬 Admin notification created');
+      } catch (notificationError) {
+        print('⚠️ Failed to create notification (non-critical): $notificationError');
+      }
 
       print('✅ Voice report saved successfully with case ID: $caseId');
       return caseId;

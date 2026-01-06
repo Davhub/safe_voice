@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:safe_voice/admin/services/admin_report_service.dart';
+import 'package:safe_voice/admin/services/cached_data_service.dart';
 import 'package:safe_voice/admin/screens/report_detail_screen.dart';
 import 'package:safe_voice/constant/colors.dart';
+import 'dart:html' as html;
+import 'package:url_launcher/url_launcher.dart';
 
 class ReportListWidget extends StatefulWidget {
   final String? status;
@@ -22,6 +25,15 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
   bool _sortAscending = false;
   bool _isGridView = false;
   
+  // Pagination state
+  int _currentPage = 1;
+  final int _reportsPerPage = 20;
+  DocumentSnapshot? _lastDocument;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+  List<DocumentSnapshot> _allLoadedDocs = [];
+  int _totalReportCount = 0;
+  
   late AnimationController _refreshAnimationController;
   late Animation<double> _refreshAnimation;
 
@@ -40,6 +52,9 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
     if (widget.status != null) {
       _selectedStatusFilter = widget.status!;
     }
+    
+    // Load total count
+    _loadTotalCount();
   }
 
   @override
@@ -47,6 +62,39 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
     _searchController.dispose();
     _refreshAnimationController.dispose();
     super.dispose();
+  }
+  
+  Future<void> _loadTotalCount() async {
+    final count = await AdminReportService.getTotalReportCount(
+      status: _selectedStatusFilter == 'all' ? null : _selectedStatusFilter,
+    );
+    if (mounted) {
+      setState(() {
+        _totalReportCount = count;
+      });
+    }
+  }
+  
+  void _loadMore(List<DocumentSnapshot> currentDocs) {
+    if (_isLoadingMore || !_hasMore) return;
+    
+    setState(() {
+      _isLoadingMore = true;
+      if (currentDocs.isNotEmpty) {
+        _lastDocument = currentDocs.last;
+      }
+      _allLoadedDocs.addAll(currentDocs);
+      _currentPage++;
+    });
+  }
+  
+  void _resetPagination() {
+    setState(() {
+      _currentPage = 1;
+      _lastDocument = null;
+      _hasMore = true;
+      _allLoadedDocs.clear();
+    });
   }
 
   @override
@@ -504,10 +552,10 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
   }
 
   Widget _buildReportsList() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: AdminReportService.getReportsStream(),
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: CachedDataService.getReportsStream(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
           return const Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -530,23 +578,19 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
           return _buildEmptyWidget();
         }
 
-        var docs = snapshot.data!.docs;
-        print('ReportListWidget: Received ${docs.length} documents from stream');
+        var reports = snapshot.data!;
+        print('ReportListWidget: Received ${reports.length} reports from stream');
         
-        if (docs.isEmpty) {
-          print('ReportListWidget: Document list is empty');
+        if (reports.isEmpty) {
+          print('ReportListWidget: Report list is empty');
           return _buildEmptyWidget();
         }
         
-        // Apply filters
-        docs = _applyFilters(docs);
-        print('ReportListWidget: After applying filters: ${docs.length} documents');
+        // Apply filters (need to update _applyFilters to work with List<Map>)
+        reports = _applyFiltersToMaps(reports);
+        print('ReportListWidget: After applying filters: ${reports.length} reports');
         
-        if (docs.isEmpty) {
-          return _buildNoResultsWidget();
-        }
-        
-        if (docs.isEmpty) {
+        if (reports.isEmpty) {
           return _buildNoResultsWidget();
         }
 
@@ -577,7 +621,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                 child: Row(
                   children: [
                     Text(
-                      '${docs.length} Report${docs.length != 1 ? 's' : ''} Found',
+                      '${reports.length} Report${reports.length != 1 ? 's' : ''} Found',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -596,7 +640,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
               ),
               
               // List content
-              _isGridView ? _buildGridView(docs) : _buildTableView(docs),
+              _isGridView ? _buildGridView(reports) : _buildTableView(reports),
             ],
           ),
         );
@@ -604,26 +648,25 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
     );
   }
 
-  Widget _buildTableView(List<QueryDocumentSnapshot> docs) {
+  Widget _buildTableView(List<Map<String, dynamic>> reports) {
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: docs.length,
+      itemCount: reports.length,
       separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey[200]),
-      itemBuilder: (context, index) => _buildEnhancedTableRow(docs[index]),
+      itemBuilder: (context, index) => _buildEnhancedTableRow(reports[index]),
     );
   }
 
-  Widget _buildEnhancedTableRow(QueryDocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    final caseId = doc.id;
+  Widget _buildEnhancedTableRow(Map<String, dynamic> data) {
+    final caseId = data['id'] as String;
     final type = data['type'] ?? 'text';
     final status = data['status'] ?? 'submitted';
     final content = data['content'] ?? data['description'] ?? '';
     final location = data['location'] ?? 'Not specified';
     final timestamp = _getTimestamp(data);
     final priority = _getReportPriority(data);
-    final hasAudio = data['audio_url'] != null || type == 'voice';
+    final hasAudio = data['audioUrl'] != null || data['audio_url'] != null || type == 'voice';
 
     return InkWell(
       onTap: () => _openReportDetail(caseId, data),
@@ -776,7 +819,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
     );
   }
 
-  Widget _buildGridView(List<QueryDocumentSnapshot> docs) {
+  Widget _buildGridView(List<Map<String, dynamic>> reports) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: GridView.builder(
@@ -788,22 +831,21 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
           crossAxisSpacing: 16,
           childAspectRatio: 1.2,
         ),
-        itemCount: docs.length,
-        itemBuilder: (context, index) => _buildReportCard(docs[index]),
+        itemCount: reports.length,
+        itemBuilder: (context, index) => _buildReportCard(reports[index]),
       ),
     );
   }
 
-  Widget _buildReportCard(QueryDocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    final caseId = doc.id;
+  Widget _buildReportCard(Map<String, dynamic> data) {
+    final caseId = data['id'] as String;
     final type = data['type'] ?? 'text';
     final status = data['status'] ?? 'submitted';
     final content = data['content'] ?? data['description'] ?? '';
     final location = data['location'] ?? 'Not specified';
     final timestamp = _getTimestamp(data);
     final priority = _getReportPriority(data);
-    final hasAudio = data['audio_url'] != null || type == 'voice';
+    final hasAudio = data['audioUrl'] != null || data['audio_url'] != null || type == 'voice';
 
     return InkWell(
       onTap: () => _openReportDetail(caseId, data),
@@ -1097,6 +1139,67 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
   }
 
   // Helper methods
+  List<Map<String, dynamic>> _applyFiltersToMaps(List<Map<String, dynamic>> reports) {
+    return reports.where((data) {
+      // Search filter
+      if (_searchQuery.isNotEmpty) {
+        final searchText = '${data['id'] ?? ''} ${data['content'] ?? ''} ${data['description'] ?? ''} ${data['location'] ?? ''}'.toLowerCase();
+        if (!searchText.contains(_searchQuery)) return false;
+      }
+      
+      // Type filter
+      if (_selectedTypeFilter != 'all') {
+        if ((data['type'] ?? 'text') != _selectedTypeFilter) return false;
+      }
+      
+      // Status filter
+      if (_selectedStatusFilter != 'all') {
+        if ((data['status'] ?? 'submitted') != _selectedStatusFilter) return false;
+      }
+      
+      // Priority filter
+      if (_selectedPriorityFilter != 'all') {
+        final priority = _getReportPriority(data);
+        if (priority != _selectedPriorityFilter) return false;
+      }
+      
+      return true;
+    }).toList()
+    ..sort((a, b) => _sortMaps(a, b));
+  }
+
+  int _sortMaps(Map<String, dynamic> a, Map<String, dynamic> b) {
+    int comparison = 0;
+    
+    switch (_sortBy) {
+      case 'date':
+        final dateA = _getTimestamp(a);
+        final dateB = _getTimestamp(b);
+        if (dateA != null && dateB != null) {
+          comparison = dateA.compareTo(dateB);
+        }
+        break;
+      case 'status':
+        comparison = (a['status'] ?? '').compareTo(b['status'] ?? '');
+        break;
+      case 'type':
+        comparison = (a['type'] ?? '').compareTo(b['type'] ?? '');
+        break;
+      case 'priority':
+        final priorityA = _getReportPriority(a);
+        final priorityB = _getReportPriority(b);
+        final priorityOrder = {'high': 3, 'medium': 2, 'low': 1};
+        comparison = (priorityOrder[priorityB] ?? 0).compareTo(priorityOrder[priorityA] ?? 0);
+        break;
+      case 'location':
+        comparison = (a['location'] ?? '').compareTo(b['location'] ?? '');
+        break;
+    }
+    
+    return _sortAscending ? comparison : -comparison;
+  }
+
+  // Legacy method kept for compatibility (not used anymore)
   List<QueryDocumentSnapshot> _applyFilters(List<QueryDocumentSnapshot> docs) {
     return docs.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
@@ -1230,7 +1333,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
   }
 
   String _getSubtitle() {
-    if (widget.status == null) return 'Comprehensive view of all submitted reports with advanced filtering and search';
+    if (widget.status == null) return 'Comprehensive view of all submitted reports';
     switch (widget.status!.toLowerCase()) {
       case 'submitted': return 'Reports awaiting initial review and assignment';
       case 'under_review': return 'Reports currently being evaluated by administrators';
@@ -1314,11 +1417,34 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
   }
 
   void _playAudio(Map<String, dynamic> data) async {
-    final audioUrl = data['audio_url'];
+    // Check both audioUrl (camelCase from user app) and audio_url (snake_case legacy)
+    final audioUrl = data['audioUrl'] ?? data['audio_url'];
     if (audioUrl != null) {
-      // TODO: Implement audio playback
+      // Try to get the proper audio URL
+      final caseId = data['caseId'] ?? data['case_id'] ?? data['id'];
+      String? downloadUrl;
+      
+      if (caseId != null) {
+        downloadUrl = await AdminReportService.getAudioDownloadUrl(caseId);
+      }
+      
+      final urlToPlay = downloadUrl ?? audioUrl;
+      
+      // Show audio player dialog
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => _AudioPlayerDialog(
+          url: urlToPlay,
+          caseId: caseId?.toString() ?? 'Unknown',
+        ),
+      );
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Audio playback functionality will be implemented')),
+        const SnackBar(
+          content: Text('Audio URL not available for this report'),
+          backgroundColor: Colors.orange,
+        ),
       );
     }
   }
@@ -1446,5 +1572,311 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
         );
       }
     }
+  }
+}
+
+// Audio Player Dialog Widget for Report List
+class _AudioPlayerDialog extends StatefulWidget {
+  final String url;
+  final String caseId;
+
+  const _AudioPlayerDialog({required this.url, required this.caseId});
+
+  @override
+  State<_AudioPlayerDialog> createState() => _AudioPlayerDialogState();
+}
+
+class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
+  html.AudioElement? _audioPlayer;
+  bool _isPlaying = false;
+  bool _isLoading = true;
+  String? _errorMessage;
+  bool _isMockAudio = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAudio();
+  }
+
+  void _initializeAudio() {
+    try {
+      _audioPlayer = html.AudioElement(widget.url);
+      _audioPlayer!.preload = 'auto';
+      
+      // Listen to events
+      _audioPlayer!.onLoadedData.listen((_) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      });
+      
+      _audioPlayer!.onError.listen((error) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _isMockAudio = true; // Assume it's a mock audio file
+            _errorMessage = 'This appears to be a test/mock audio file';
+          });
+        }
+      });
+      
+      _audioPlayer!.onPlay.listen((_) {
+        if (mounted) {
+          setState(() => _isPlaying = true);
+        }
+      });
+      
+      _audioPlayer!.onPause.listen((_) {
+        if (mounted) {
+          setState(() => _isPlaying = false);
+        }
+      });
+      
+      _audioPlayer!.onEnded.listen((_) {
+        if (mounted) {
+          setState(() => _isPlaying = false);
+        }
+      });
+      
+      // Load the audio
+      _audioPlayer!.load();
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Error initializing audio player: $e';
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer?.pause();
+    _audioPlayer = null;
+    super.dispose();
+  }
+
+  void _togglePlayPause() {
+    if (_audioPlayer == null) return;
+    
+    if (_isPlaying) {
+      _audioPlayer!.pause();
+    } else {
+      _audioPlayer!.play();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Row(
+        children: [
+          const Icon(Icons.audiotrack, color: AppColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Audio Recording'),
+                Text(
+                  'Case: ${widget.caseId}',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+      content: Container(
+        width: 450,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_isLoading)
+              Column(
+                children: const [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading audio...'),
+                ],
+              )
+            else if (_errorMessage != null || _isMockAudio)
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, size: 64, color: Colors.orange),
+                        const SizedBox(height: 16),
+                        Text(
+                          _errorMessage ?? 'Test Audio File',
+                          style: const TextStyle(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'This audio file cannot be played because:',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '• It\'s a mock/test audio file created for development\n'
+                          '• It doesn\'t contain actual audio data\n'
+                          '• The M4A format may not be fully supported',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                        ),
+                        const SizedBox(height: 20),
+                        const Divider(),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Solutions:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '1. Enable real audio recording on the user app\n'
+                          '2. Test with actual voice recordings\n'
+                          '3. Check Firebase Storage for file validity',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final Uri uri = Uri.parse(widget.url);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: const Text('Try opening in new tab'),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // Try playing anyway
+                          setState(() {
+                            _errorMessage = null;
+                            _isMockAudio = false;
+                          });
+                          _audioPlayer?.play().catchError((e) {
+                            if (mounted) {
+                              setState(() {
+                                _errorMessage = 'Playback failed: $e';
+                              });
+                            }
+                          });
+                        },
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Try anyway'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            else
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    child: Icon(
+                      _isPlaying ? Icons.volume_up : Icons.headset,
+                      size: 64,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: _togglePlayPause,
+                        icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+                        label: Text(_isPlaying ? 'Pause' : 'Play'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          _audioPlayer?.pause();
+                          _audioPlayer?.currentTime = 0;
+                          setState(() => _isPlaying = false);
+                        },
+                        icon: const Icon(Icons.stop),
+                        label: const Text('Stop'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () async {
+                          final Uri uri = Uri.parse(widget.url);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        icon: const Icon(Icons.download, size: 16),
+                        label: const Text('Download'),
+                      ),
+                      TextButton.icon(
+                        onPressed: () async {
+                          final Uri uri = Uri.parse(widget.url);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: const Text('Open in new tab'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

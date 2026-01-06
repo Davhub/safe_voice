@@ -1,10 +1,13 @@
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
+import 'package:audioplayers/audioplayers.dart';
 
-/// Service for handling audio recording functionality with mock implementation
-/// Note: Real audio recording temporarily disabled due to package compatibility issues
+/// Service for handling audio recording functionality with REAL implementation
 class AudioService {
+  static final AudioRecorder _recorder = AudioRecorder();
+  static final AudioPlayer _player = AudioPlayer();
   static String? _currentRecordingPath;
   static bool _isRecording = false;
   static bool _isPlaying = false;
@@ -36,7 +39,7 @@ class AudioService {
     }
   }
 
-  /// Start recording audio (mock implementation)
+  /// Start recording audio (REAL IMPLEMENTATION)
   static Future<bool> startRecording() async {
     try {
       // Check permission first
@@ -48,50 +51,34 @@ class AudioService {
         }
       }
 
-      // Create mock recording
-      return await _createMockRecording();
-    } catch (e) {
-      print('Error starting recording: $e');
-      return false;
-    }
-  }
+      // Check if device supports recording
+      if (!await _recorder.hasPermission()) {
+        print('No permission to record audio');
+        return false;
+      }
 
-  /// Create mock recording
-  static Future<bool> _createMockRecording() async {
-    try {
+      // Get directory for recording
       Directory appDir = await getApplicationDocumentsDirectory();
       String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
       _currentRecordingPath = '${appDir.path}/voice_report_$timestamp.m4a';
-      
-      // Create a proper M4A audio file with correct headers for playback
-      File mockFile = File(_currentRecordingPath!);
-      
-      // Create proper M4A/AAC-LC audio file structure
-      List<int> m4aData = [
-        // ftyp box (file type)
-        0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, // size + 'ftyp'
-        0x4D, 0x34, 0x41, 0x20, 0x00, 0x00, 0x00, 0x00, // 'M4A '
-        0x4D, 0x34, 0x41, 0x20, 0x69, 0x73, 0x6F, 0x6D, // compatible brands
-        0x6D, 0x70, 0x34, 0x32, 0x00, 0x00, 0x00, 0x00,
-        
-        // mdat box (media data) - minimal audio content
-        0x00, 0x00, 0x04, 0x08, 0x6D, 0x64, 0x61, 0x74, // size + 'mdat'
-        
-        // Mock AAC-LC audio frames (silence with proper headers)
-        0xFF, 0xF1, 0x50, 0x80, 0x01, 0x3F, 0xFC, 0xDA, // AAC header
-        0x00, 0x4C, 0x61, 0x76, 0x63, 0x35, 0x38, 0x2E, // Audio frame data
-        
-        // Add more mock audio data for realistic file size (about 2KB)
-        ...List.generate(2000, (i) => (i * 7 + 13) % 256),
-      ];
-      
-      await mockFile.writeAsBytes(m4aData);
-      
+
+      // Configure recording settings for high quality
+      const config = RecordConfig(
+        encoder: AudioEncoder.aacLc, // AAC-LC codec for M4A
+        bitRate: 128000, // 128 kbps for good quality
+        sampleRate: 44100, // CD quality sample rate
+        numChannels: 1, // Mono recording
+      );
+
+      // Start recording
+      await _recorder.start(config, path: _currentRecordingPath!);
       _isRecording = true;
-      print('Mock M4A audio file created: $_currentRecordingPath (${m4aData.length} bytes)');
+      
+      print('✅ Real audio recording started: $_currentRecordingPath');
       return true;
     } catch (e) {
-      print('Error creating mock recording: $e');
+      print('❌ Error starting recording: $e');
+      _isRecording = false;
       return false;
     }
   }
@@ -100,46 +87,55 @@ class AudioService {
   static Future<File?> stopRecording() async {
     try {
       if (_isRecording) {
+        final path = await _recorder.stop();
         _isRecording = false;
-        if (_currentRecordingPath != null && await File(_currentRecordingPath!).exists()) {
-          print('Mock recording stopped: $_currentRecordingPath');
-          return File(_currentRecordingPath!);
+        
+        if (path != null && await File(path).exists()) {
+          _currentRecordingPath = path;
+          final file = File(path);
+          final fileSize = await file.length();
+          print('✅ Real audio recording stopped: $path (${fileSize} bytes)');
+          return file;
         }
       }
       return null;
     } catch (e) {
-      print('Error stopping recording: $e');
+      print('❌ Error stopping recording: $e');
       _isRecording = false;
       return null;
     }
   }
 
-  /// Play recorded audio for preview (mock implementation)
+  /// Play recorded audio for preview
   static Future<void> playRecording(String filePath) async {
     try {
       if (_isPlaying) {
         await stopPlayback();
       }
-      
-      print('Audio playback simulation: $filePath');
+
+      print('🔊 Playing audio: $filePath');
+      await _player.play(DeviceFileSource(filePath));
       _isPlaying = true;
-      
-      // Simulate playback completion after 3 seconds
-      Future.delayed(Duration(seconds: 3), () {
+
+      // Listen for completion
+      _player.onPlayerComplete.listen((_) {
         _isPlaying = false;
+        print('✅ Audio playback completed');
       });
     } catch (e) {
-      print('Error playing recording: $e');
+      print('❌ Error playing recording: $e');
+      _isPlaying = false;
     }
   }
 
   /// Stop audio playback
   static Future<void> stopPlayback() async {
     try {
+      await _player.stop();
       _isPlaying = false;
-      print('Audio playback stopped');
+      print('⏹️ Audio playback stopped');
     } catch (e) {
-      print('Error stopping playback: $e');
+      print('❌ Error stopping playback: $e');
     }
   }
 
@@ -150,17 +146,27 @@ class AudioService {
       if (!await file.exists()) {
         return 0;
       }
+
+      // Use audio player to get duration
+      await _player.setSourceDeviceFile(filePath);
+      final duration = await _player.getDuration();
       
-      // For mock recordings, return a reasonable duration based on file size
-      int fileSize = await file.length();
-      if (fileSize > 1000) {
-        return 30; // 30 seconds for valid files
-      } else {
-        return 5; // 5 seconds for small files
+      if (duration != null) {
+        return duration.inSeconds;
       }
-    } catch (e) {
-      print('Error getting duration: $e');
+      
       return 0;
+    } catch (e) {
+      print('Error getting recording duration: $e');
+      // Estimate based on file size (rough approximation)
+      try {
+        File file = File(filePath);
+        int fileSize = await file.length();
+        // Estimate: ~128kbps bitrate = 16KB/second
+        return (fileSize / 16000).round();
+      } catch (e2) {
+        return 0;
+      }
     }
   }
 
@@ -176,17 +182,9 @@ class AudioService {
   /// Clean up resources
   static Future<void> dispose() async {
     try {
-      // Stop recording if active
-      if (_isRecording) {
-        await stopRecording();
-      }
-      
-      // Stop playback if active
-      if (_isPlaying) {
-        await stopPlayback();
-      }
-      
-      print('Audio service disposed');
+      await _recorder.dispose();
+      await _player.dispose();
+      print('🧹 Audio service disposed');
     } catch (e) {
       print('Error disposing audio service: $e');
     }
@@ -198,7 +196,7 @@ class AudioService {
       File file = File(filePath);
       if (await file.exists()) {
         await file.delete();
-        print('Recording deleted: $filePath');
+        print('🗑️ Recording deleted: $filePath');
       }
     } catch (e) {
       print('Error deleting recording: $e');
@@ -214,7 +212,7 @@ class AudioService {
 
   /// Check if device supports recording
   static Future<bool> isRecordingSupported() async {
-    return true; // Mock recording is always "supported"
+    return await _recorder.hasPermission();
   }
 
   /// Get file size in human readable format
@@ -235,6 +233,84 @@ class AudioService {
 
   /// Get platform support status message
   static String getPlatformStatusMessage() {
-    return 'Mock audio recording (development mode - will be high-quality in production)';
+    if (Platform.isAndroid) {
+      return 'Android audio recording active (AAC-LC 128kbps)';
+    } else if (Platform.isIOS) {
+      return 'iOS audio recording active (AAC-LC 128kbps)';
+    } else {
+      return 'Real audio recording enabled';
+    }
+  }
+
+  /// Cancel recording without saving
+  static Future<void> cancelRecording() async {
+    try {
+      if (_isRecording) {
+        await _recorder.stop();
+        _isRecording = false;
+        
+        // Delete the file if it exists
+        if (_currentRecordingPath != null) {
+          File file = File(_currentRecordingPath!);
+          if (await file.exists()) {
+            await file.delete();
+            print('🗑️ Recording cancelled and deleted');
+          }
+        }
+        _currentRecordingPath = null;
+      }
+    } catch (e) {
+      print('Error cancelling recording: $e');
+    }
+  }
+
+  /// Validate audio file
+  static Future<bool> validateAudioFile(String filePath) async {
+    try {
+      File file = File(filePath);
+      if (!await file.exists()) {
+        print('❌ Audio file does not exist');
+        return false;
+      }
+
+      int fileSize = await file.length();
+      if (fileSize < 1000) {
+        print('❌ Audio file too small (${fileSize} bytes)');
+        return false;
+      }
+
+      print('✅ Audio file validated: ${fileSize} bytes');
+      return true;
+    } catch (e) {
+      print('❌ Error validating audio file: $e');
+      return false;
+    }
+  }
+
+  /// Clean up old recordings
+  static Future<void> cleanupOldRecordings() async {
+    try {
+      Directory appDir = await getApplicationDocumentsDirectory();
+      List<FileSystemEntity> files = appDir.listSync();
+      
+      int deletedCount = 0;
+      for (var file in files) {
+        if (file is File && file.path.contains('voice_report_') && file.path.endsWith('.m4a')) {
+          // Delete files older than 7 days
+          DateTime fileDate = await file.lastModified();
+          DateTime now = DateTime.now();
+          if (now.difference(fileDate).inDays > 7) {
+            await file.delete();
+            deletedCount++;
+          }
+        }
+      }
+      
+      if (deletedCount > 0) {
+        print('🧹 Cleaned up $deletedCount old recordings');
+      }
+    } catch (e) {
+      print('Error cleaning up old recordings: $e');
+    }
   }
 }

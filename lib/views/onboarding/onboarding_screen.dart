@@ -19,7 +19,7 @@ class OnboardingScreen extends StatelessWidget {
               Column(
                 children: [
                   Image.asset(
-                      'assets/pngs/Logo.png', // Direct path as fallback
+                      'assets/pngs/Logo.png',
                       width: 140,
                       height: 140,
                       

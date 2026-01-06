@@ -4,12 +4,23 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:safe_voice/admin/screens/admin_login_screen.dart';
 import 'package:safe_voice/admin/screens/admin_dashboard_screen.dart';
 import 'package:safe_voice/admin/services/admin_auth_service.dart';
+import 'package:safe_voice/admin/services/simple_cache_service.dart';
 import 'package:safe_voice/constant/colors.dart';
 import 'package:safe_voice/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  print('🚀 Initializing Admin App...');
+  
+  // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print('✅ Firebase initialized');
+  
+  // Initialize cache service to prevent redundant fetching on reload
+  await SimpleCacheService.initialize();
+  print('✅ Cache service initialized - ready to serve cached data on reload!');
+  
   runApp(const SafeVoiceAdminApp());
 }
 

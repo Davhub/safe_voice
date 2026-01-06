@@ -8,50 +8,50 @@ class DashboardHeader extends StatelessWidget {
     return Row(
       children: [
         // Search bar
-        Expanded(
-          flex: 2,
-          child: Container(
-            height: 45,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search reports, users, alerts...',
-                prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 20),
+        // Expanded(
+        //   flex: 2,
+        //   child: Container(
+        //     height: 45,
+        //     decoration: BoxDecoration(
+        //       color: Colors.white,
+        //       borderRadius: BorderRadius.circular(12),
+        //       boxShadow: [
+        //         BoxShadow(
+        //           color: Colors.black.withOpacity(0.05),
+        //           blurRadius: 10,
+        //           offset: const Offset(0, 2),
+        //         ),
+        //       ],
+        //     ),
+        //     child: TextField(
+        //       decoration: InputDecoration(
+        //         hintText: 'Search reports, users, alerts...',
+        //         prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+        //         border: InputBorder.none,
+        //         contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        //       ),
+        //     ),
+        //   ),
+        // ),
+        // const SizedBox(width: 20),
         
         // Notifications
-        Container(
-          width: 45,
-          height: 45,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: const Icon(Icons.notifications_rounded, color: Colors.grey),
-        ),
+        // Container(
+        //   width: 45,
+        //   height: 45,
+        //   decoration: BoxDecoration(
+        //     color: Colors.white,
+        //     borderRadius: BorderRadius.circular(12),
+        //     boxShadow: [
+        //       BoxShadow(
+        //         color: Colors.black.withOpacity(0.05),
+        //         blurRadius: 10,
+        //         offset: const Offset(0, 2),
+        //       ),
+        //     ],
+        //   ),
+        //   child: const Icon(Icons.notifications_rounded, color: Colors.grey),
+        // ),
       ],
     );
   }

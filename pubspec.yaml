@@ -34,45 +34,23 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  
-  # Firebase packages for anonymous reporting
   firebase_core: ^2.32.0
   cloud_firestore: ^4.17.5
   firebase_storage: ^11.7.7
   firebase_auth: ^4.4.0
-  
-  # For generating anonymous case IDs and file handling
   uuid: ^3.0.7
   path_provider: ^2.1.2
   path: ^1.8.3
-  
-  # For voice recording functionality (temporarily disabled)
-  # record: ^4.4.4
-  # audioplayers: ^4.1.0
-  
-  # For file picking (attachments, images)
   file_picker: ^8.0.0+1
-  
-  # For permissions (microphone, storage)
   permission_handler: ^11.3.1
-  
-  # For improved UX and state management
+  record: ^6.0.0
+  audioplayers: ^6.1.0
   shared_preferences: ^2.2.2
   connectivity_plus: ^5.0.2
-  
-  # Location services implemented natively to avoid plugin compatibility issues
-  # Native method channels used for GPS location detection
-  
-  # For opening external URLs
   url_launcher: ^6.3.1
-  
-  # For offline storage
   sqflite: ^2.3.3
   intl: ^0.20.2
-  
-  # For proper audio recording/playback (temporarily disabled due to compatibility)
-  # record: ^4.4.4
-  # audioplayers: ^4.1.0
+  timeago: ^3.7.0
 
 dev_dependencies:
   flutter_test:

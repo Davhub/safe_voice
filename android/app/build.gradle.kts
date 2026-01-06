@@ -25,7 +25,7 @@ android {
         applicationId = "com.example.safe_voice"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 21
+        minSdk = flutter.minSdkVersion  // Updated for record_android package requirement (Android 6.0+)
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"

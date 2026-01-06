@@ -118,26 +118,83 @@ class MainActivity : FlutterActivity() {
 
                 if (!addresses.isNullOrEmpty()) {
                     val address = addresses[0]
-                    val addressText = buildString {
-                        address.thoroughfare?.let { append("$it, ") }
-                        address.locality?.let { append("$it, ") }
-                        address.adminArea?.let { append("$it, ") }
-                        address.countryName?.let { append(it) }
-                    }.trimEnd(',', ' ')
-
+                    
+                    // Build detailed address with all available components
+                    val addressParts = mutableListOf<String>()
+                    
+                    // Add street number if available
+                    address.subThoroughfare?.let { 
+                        addressParts.add(it) 
+                    }
+                    
+                    // Add street name
+                    address.thoroughfare?.let { 
+                        if (addressParts.isEmpty()) {
+                            addressParts.add(it)
+                        } else {
+                            addressParts[addressParts.lastIndex] += " $it"
+                        }
+                    }
+                    
+                    // Add sublocality/neighborhood
+                    address.subLocality?.let { 
+                        if (addressParts.isEmpty() || addressParts.last() != it) {
+                            addressParts.add(it) 
+                        }
+                    }
+                    
+                    // Add city/locality
+                    address.locality?.let { 
+                        if (addressParts.isEmpty() || addressParts.last() != it) {
+                            addressParts.add(it) 
+                        }
+                    }
+                    
+                    // Add postal code
+                    address.postalCode?.let { 
+                        if (addressParts.isNotEmpty()) {
+                            addressParts[addressParts.lastIndex] += " $it"
+                        } else {
+                            addressParts.add(it)
+                        }
+                    }
+                    
+                    // Add state/admin area
+                    address.adminArea?.let { 
+                        if (addressParts.isEmpty() || addressParts.last() != it) {
+                            addressParts.add(it) 
+                        }
+                    }
+                    
+                    // Add country
+                    address.countryName?.let { 
+                        if (addressParts.isEmpty() || addressParts.last() != it) {
+                            addressParts.add(it) 
+                        }
+                    }
+                    
+                    // Build final address string
+                    val addressText = addressParts.joinToString(", ")
+                    
+                    // Add coordinates for precision
+                    val preciseLocation = "$addressText (${String.format("%.6f", location.latitude)}, ${String.format("%.6f", location.longitude)})"
+                    
                     if (addressText.isNotEmpty()) {
-                        result.success(addressText)
+                        result.success(preciseLocation)
                     } else {
-                        result.success("${location.latitude}, ${location.longitude}")
+                        result.success("${String.format("%.6f", location.latitude)}, ${String.format("%.6f", location.longitude)}")
                     }
                 } else {
-                    result.success("${location.latitude}, ${location.longitude}")
+                    // Return coordinates if geocoding fails
+                    result.success("${String.format("%.6f", location.latitude)}, ${String.format("%.6f", location.longitude)}")
                 }
             } else {
-                result.success("${location.latitude}, ${location.longitude}")
+                // Geocoder not available, return coordinates
+                result.success("${String.format("%.6f", location.latitude)}, ${String.format("%.6f", location.longitude)}")
             }
         } catch (e: Exception) {
-            result.success("${location.latitude}, ${location.longitude}")
+            // On error, return coordinates
+            result.success("${String.format("%.6f", location.latitude)}, ${String.format("%.6f", location.longitude)}")
         }
     }
 

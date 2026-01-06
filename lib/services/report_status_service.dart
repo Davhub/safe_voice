@@ -234,8 +234,16 @@ class ReportStatusService {
   /// Check if device is online
   static Future<bool> _isOnline() async {
     try {
-      var connectivityResult = await Connectivity().checkConnectivity();
-      return connectivityResult != ConnectivityResult.none;
+      final dynamic connectivityResult = await Connectivity().checkConnectivity();
+      
+      // Handle both single value and list of values
+      if (connectivityResult is List) {
+        final results = connectivityResult.cast<ConnectivityResult>();
+        return results.any((r) => r != ConnectivityResult.none);
+      } else {
+        // Legacy single value support
+        return connectivityResult != ConnectivityResult.none;
+      }
     } catch (e) {
       return false;
     }

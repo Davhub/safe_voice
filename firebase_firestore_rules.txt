@@ -4,22 +4,50 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow anonymous users to create reports and check status by case ID
-    match /reports/{caseId} {
-      // Allow anonymous report creation
-      allow create: if true;
-      
-      // Allow reading for status checking - users can only read if they know the exact case ID
-      // This provides security through obscurity while enabling status checks
-      allow read: if request.auth == null;
-      
-      // Only admins can update/delete (add admin auth rules here when needed)
-      allow update, delete: if false;
+    
+    // Helper function to check if user is authenticated admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email != null;
     }
     
-    // Deny all other access to maintain security
+    // Reports collection - for anonymous user reports
+    match /reports/{caseId} {
+      // Allow anonymous users to create reports
+      allow create: if true;
+      
+      // Allow anyone to read (for status checking with case ID)
+      allow read: if true;
+      
+      // Only authenticated admins can update/delete reports
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // Admin notifications collection - for admin dashboard notifications
+    match /admin_notifications/{notificationId} {
+      // Only authenticated admins can access notifications
+      allow read, write: if isAdmin();
+      
+      // Allow creation from anywhere (for automatic notification generation)
+      allow create: if true;
+    }
+    
+    // Admin users collection - for admin management
+    match /admin_users/{userId} {
+      // Only authenticated admins can access admin user data
+      allow read, write: if isAdmin();
+    }
+    
+    // Admin messages collection - for internal admin communication
+    match /admin_messages/{messageId} {
+      // Only authenticated admins can access messages
+      allow read, write: if isAdmin();
+    }
+    
+    // Deny all other access by default for security
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
+

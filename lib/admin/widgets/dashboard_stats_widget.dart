@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:safe_voice/admin/services/admin_report_service.dart';
-import 'package:safe_voice/admin/widgets/report_list_widget.dart';
+import 'package:safe_voice/admin/services/admin_activity_service.dart';
+import 'package:safe_voice/admin/services/cached_data_service.dart';
 import 'package:safe_voice/constant/colors.dart';
 
 class DashboardStatsWidget extends StatefulWidget {
@@ -36,14 +38,18 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget> with Ticker
   }
 
   Future<void> _loadData() async {
-    try {
-      _stats = await AdminReportService.getReportsStatistics();
-      _animationController.forward();
-    } catch (e) {
-      // Handle error
-    } finally {
-      setState(() => _loading = false);
-    }
+    // Use cached statistics stream instead of Future
+    CachedDataService.getStatisticsStream().listen((stats) {
+      if (mounted) {
+        setState(() {
+          _stats = stats;
+          _loading = false;
+        });
+        if (!_animationController.isCompleted) {
+          _animationController.forward();
+        }
+      }
+    });
   }
 
   @override
@@ -74,8 +80,6 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget> with Ticker
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(flex: 2, child: _buildRecentActivity()),
-                const SizedBox(width: 24),
-                Expanded(child: _buildQuickActions()),
               ],
             ),
           ],
@@ -171,7 +175,6 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget> with Ticker
         value: '${_stats['total'] ?? 0}',
         icon: Icons.report_rounded,
         color: Colors.blue,
-        trend: '+12%',
         isPositive: true,
       ),
       StatsCardData(
@@ -179,7 +182,6 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget> with Ticker
         value: '${_stats['pending'] ?? 0}',
         icon: Icons.pending_actions_rounded,
         color: Colors.orange,
-        trend: '+3',
         isPositive: false,
       ),
       StatsCardData(
@@ -187,7 +189,6 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget> with Ticker
         value: '${_stats['resolved'] ?? 0}',
         icon: Icons.check_circle_rounded,
         color: Colors.green,
-        trend: '+8%',
         isPositive: true,
       ),
       StatsCardData(
@@ -195,7 +196,6 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget> with Ticker
         value: '${_stats['thisWeek'] ?? 0}',
         icon: Icons.calendar_today_rounded,
         color: Colors.purple,
-        trend: '+2',
         isPositive: true,
       ),
     ];
@@ -246,32 +246,7 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget> with Ticker
                   size: 24,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: data.isPositive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      data.isPositive ? Icons.trending_up : Icons.trending_down,
-                      size: 12,
-                      color: data.isPositive ? Colors.green : Colors.red,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      data.trend,
-                      style: TextStyle(
-                        color: data.isPositive ? Colors.green : Colors.red,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              
             ],
           ),
           const Spacer(),
@@ -326,7 +301,7 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget> with Ticker
               ),
               TextButton(
                 onPressed: () {
-                  ReportListWidget();
+                  // Navigate to all reports
                 },
                 child: const Text('View All'),
               ),
@@ -334,25 +309,146 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget> with Ticker
           ),
           const SizedBox(height: 16),
           
-          // Activity items
-          ...List.generate(5, (index) => _buildActivityItem(index)),
+          // Real-time activity stream
+          StreamBuilder<List<Map<String, dynamic>>>(
+            stream: CachedDataService.getActivitiesStream(limit: 5),
+            builder: (context, snapshot) {
+              // Show loading indicator while waiting
+              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              // Handle errors
+              if (snapshot.hasError) {
+                print('❌ Activity stream error: ${snapshot.error}');
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.orange[300], size: 40),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Unable to load activities',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {}); // Trigger rebuild to retry
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              // Check if there's no data
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      children: [
+                        Icon(Icons.history, color: Colors.grey[300], size: 40),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No recent activity',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Activities will appear here once you perform actions',
+                          style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              // Display activities
+              return Column(
+                children: snapshot.data!.map((data) {
+                  return _buildActivityItem(data);
+                }).toList(),
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildActivityItem(int index) {
-    final activities = [
-      {'icon': Icons.add_circle, 'title': 'New report submitted', 'time': '2 min ago', 'color': Colors.green},
-      {'icon': Icons.update, 'title': 'Case SV1234 updated', 'time': '15 min ago', 'color': Colors.blue},
-      {'icon': Icons.check_circle, 'title': 'Case SV5678 resolved', 'time': '1 hour ago', 'color': Colors.green},
-      {'icon': Icons.person_add, 'title': 'New admin user added', 'time': '2 hours ago', 'color': Colors.purple},
-      {'icon': Icons.security, 'title': 'Security audit completed', 'time': '1 day ago', 'color': Colors.orange},
-    ];
-
-    if (index >= activities.length) return const SizedBox.shrink();
+  Widget _buildActivityItem(Map<String, dynamic> activity) {
+    final type = activity['type'] ?? 'info';
+    final title = activity['title'] ?? 'Activity';
+    final timestamp = activity['timestamp'] as Timestamp?;
+    final style = AdminActivityService.getActivityStyle(type);
     
-    final activity = activities[index];
+    // Map icon name to IconData
+    IconData icon;
+    switch (style['icon']) {
+      case 'add_circle':
+        icon = Icons.add_circle;
+        break;
+      case 'update':
+        icon = Icons.update;
+        break;
+      case 'check_circle':
+        icon = Icons.check_circle;
+        break;
+      case 'person_add':
+        icon = Icons.person_add;
+        break;
+      case 'person_remove':
+        icon = Icons.person_remove;
+        break;
+      case 'settings':
+        icon = Icons.settings;
+        break;
+      case 'security':
+        icon = Icons.security;
+        break;
+      case 'download':
+        icon = Icons.download;
+        break;
+      case 'warning':
+        icon = Icons.warning;
+        break;
+      default:
+        icon = Icons.info;
+    }
+    
+    // Map color name to Color
+    Color color;
+    switch (style['color']) {
+      case 'green':
+        color = Colors.green;
+        break;
+      case 'blue':
+        color = Colors.blue;
+        break;
+      case 'purple':
+        color = Colors.purple;
+        break;
+      case 'red':
+        color = Colors.red;
+        break;
+      case 'orange':
+        color = Colors.orange;
+        break;
+      default:
+        color = Colors.grey;
+    }
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -362,12 +458,12 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget> with Ticker
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: (activity['color'] as Color).withOpacity(0.1),
+              color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
-              activity['icon'] as IconData,
-              color: activity['color'] as Color,
+              icon,
+              color: color,
               size: 20,
             ),
           ),
@@ -377,13 +473,13 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget> with Ticker
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  activity['title'] as String,
+                  title,
                   style: const TextStyle(
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
-                  activity['time'] as String,
+                  AdminActivityService.formatTimestamp(timestamp),
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 12,
@@ -396,91 +492,6 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget> with Ticker
       ),
     );
   }
-
-  Widget _buildQuickActions() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Quick Actions',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          _buildQuickActionButton(
-            'Review Pending Cases',
-            Icons.pending_actions,
-            Colors.orange,
-            () {},
-          ),
-          const SizedBox(height: 12),
-          _buildQuickActionButton(
-            'Generate Report',
-            Icons.analytics,
-            Colors.blue,
-            () {},
-          ),
-          const SizedBox(height: 12),
-          _buildQuickActionButton(
-            'Export Data',
-            Icons.download,
-            Colors.green,
-            () {},
-          ),
-          const SizedBox(height: 12),
-          _buildQuickActionButton(
-            'System Settings',
-            Icons.settings,
-            Colors.grey,
-            () {},
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionButton(String title, IconData icon, Color color, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.withOpacity(0.2)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-            ),
-            Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class StatsCardData {
@@ -488,7 +499,6 @@ class StatsCardData {
   final String value;
   final IconData icon;
   final Color color;
-  final String trend;
   final bool isPositive;
 
   StatsCardData({
@@ -496,7 +506,6 @@ class StatsCardData {
     required this.value,
     required this.icon,
     required this.color,
-    required this.trend,
     required this.isPositive,
   });
 }

@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:safe_voice/admin/widgets/report_list_widget.dart';
 import 'package:safe_voice/admin/widgets/dashboard_stats_widget.dart';
-import 'package:safe_voice/admin/widgets/alert_management_widget.dart';
+import 'package:safe_voice/admin/widgets/notifications_widget.dart';
+import 'package:safe_voice/admin/widgets/settings_widget.dart';
 import 'package:safe_voice/admin/services/admin_auth_service.dart';
+import 'package:safe_voice/admin/services/admin_notification_service.dart';
+import 'package:safe_voice/admin/services/admin_activity_service.dart';
+import 'package:safe_voice/admin/services/report_listener_service.dart';
+import 'package:safe_voice/admin/services/firestore_init_service.dart';
 import 'package:safe_voice/constant/colors.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -16,6 +22,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
   int _selectedIndex = 0;
   Map<String, dynamic>? _adminInfo;
   bool _isLoading = true;
+  static const String _selectedIndexKey = 'admin_selected_tab';
   
   late AnimationController _slideAnimationController;
   late Animation<Offset> _slideAnimation;
@@ -28,33 +35,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
     ),
     NavigationItem(
       icon: Icons.notifications_active_rounded,
-      label: 'Alert Management',
-      description: 'Monitor active alerts',
+      label: 'Notifications',
+      description: 'System notifications',
     ),
     NavigationItem(
       icon: Icons.report_rounded,
       label: 'All Reports',
       description: 'View all submitted reports',
     ),
-    NavigationItem(
-      icon: Icons.pending_actions_rounded,
-      label: 'Pending Review',
-      description: 'Reports awaiting action',
-    ),
+    
     NavigationItem(
       icon: Icons.check_circle_rounded,
       label: 'Resolved',
       description: 'Completed cases',
-    ),
-    NavigationItem(
-      icon: Icons.message_rounded,
-      label: 'Messages',
-      description: 'Communication center',
-    ),
-    NavigationItem(
-      icon: Icons.analytics_rounded,
-      label: 'Analytics',
-      description: 'Reports & trends',
     ),
     NavigationItem(
       icon: Icons.settings_rounded,
@@ -78,11 +71,46 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
       curve: Curves.easeOutCubic,
     ));
     _loadAdminInfo();
+    _loadSelectedIndex();  // Load saved tab
+    
+    // Initialize Firestore collections with sample data if needed
+    FirestoreInitService.initializeAdminCollections();
+    
+    // Initialize activities collection if empty
+    AdminActivityService.initializeActivities();
+    
+    // Start listening to report changes
+    ReportListenerService.startListening();
+  }
+  
+  Future<void> _loadSelectedIndex() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedIndex = prefs.getInt(_selectedIndexKey);
+      if (savedIndex != null && savedIndex < _navigationItems.length) {
+        setState(() {
+          _selectedIndex = savedIndex;
+        });
+      }
+    } catch (e) {
+      // If fails, just stay on default tab
+    }
+  }
+  
+  Future<void> _saveSelectedIndex(int index) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_selectedIndexKey, index);
+    } catch (e) {
+      // Ignore save errors
+    }
   }
 
   @override
   void dispose() {
     _slideAnimationController.dispose();
+    // Stop listening when dashboard is disposed
+    ReportListenerService.stopListening();
     super.dispose();
   }
 
@@ -145,7 +173,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
       width: 280,
       height: MediaQuery.of(context).size.height,
       decoration: const BoxDecoration(
-        color: Color(0xFF0C1935), // Dark blue background
+        color: Color(0xFF101924), // Dark blue background
         boxShadow: [
           BoxShadow(
             color: Colors.black12,
@@ -165,14 +193,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.teal,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
-                    Icons.security_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
+                  child: Image.asset(
+                      'assets/pngs/Logo.png',
+                      width: 80,
+                      height: 80,
+                      
+                    ),
                 ),
                 const SizedBox(width: 12),
                 const Text(
@@ -229,7 +257,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                             ),
                           )
                         : null,
-                    onTap: () => setState(() => _selectedIndex = index),
+                    onTap: () {
+                      setState(() => _selectedIndex = index);
+                      _saveSelectedIndex(index);  // Persist tab selection
+                    },
                   ),
                 );
               },
@@ -289,14 +320,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white70),
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'profile',
-                child: ListTile(
-                  leading: Icon(Icons.person),
-                  title: Text('Profile'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
+              
               const PopupMenuItem(
                 value: 'settings',
                 child: ListTile(
@@ -328,79 +352,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
 
   Widget _buildDashboardHeader() {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        // Search bar
-        Expanded(
-          flex: 2,
-          child: Container(
-            height: 45,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
+        Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _adminInfo?['name'] ?? 'Admin User',
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                const Text(
+                  'System Administrator',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search reports, users, alerts...',
-                prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 20),
-        
-        // // Quick Actions
-        // _buildQuickActionButton(
-        //   icon: Icons.add_rounded,
-        //   label: 'New Report',
-        //   onTap: () {},
-        // ),
-        // const SizedBox(width: 12),
-        
-        // Notifications
-        Container(
-          width: 45,
-          height: 45,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              const Center(
-                child: Icon(Icons.notifications_rounded, color: Colors.grey),
-              ),
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
+
+            const SizedBox(width:10),
         
         // Profile (simplified for header)
         Container(
@@ -415,47 +391,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
             color: Colors.white,
           ),
         ),
-      ],
-    );
-  }
+        
 
-  Widget _buildQuickActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
+        Divider(color: Colors.grey,),
+      ],
     );
   }
 
@@ -474,20 +413,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
     switch (_selectedIndex) {
       case 0: // Overview
         return const DashboardStatsWidget();
-      case 1: // Alert Management
-        return const AlertManagementWidget();
+      case 1: // Notifications
+        return const NotificationsWidget();
       case 2: // All Reports
         return const ReportListWidget();
-      case 3: // Pending Review
-        return const ReportListWidget(status: 'submitted');
-      case 4: // Resolved
+      case 3: // Resolved
         return const ReportListWidget(status: 'resolved');
-      case 5: // Messages
-        return _buildComingSoonWidget('Messages');
-      case 6: // Analytics
-        return _buildComingSoonWidget('Analytics');
-      case 7: // Settings
-        return _buildComingSoonWidget('Settings');
+      case 4: // Settings
+        return const SettingsWidget();
       default:
         return const DashboardStatsWidget();
     }
@@ -630,6 +563,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                     selectedTileColor: const Color(0xFF1E3A8A),
                     onTap: () {
                       setState(() => _selectedIndex = index);
+                      _saveSelectedIndex(index);  // Persist tab selection
                       Navigator.pop(context);
                     },
                   );

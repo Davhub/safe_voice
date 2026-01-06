@@ -5,6 +5,7 @@ import 'package:safe_voice/admin/services/admin_report_service.dart';
 import 'package:safe_voice/admin/services/admin_auth_service.dart';
 import 'package:safe_voice/constant/colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:html' as html;
 
 class ReportDetailScreen extends StatefulWidget {
   final String caseId;
@@ -32,6 +33,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
   String? _audioUrl;
   List<Map<String, dynamic>> _timeline = [];
   List<Map<String, dynamic>> _adminNotes = [];
+  html.AudioElement? _audioPlayer;
   
   late AnimationController _fadeAnimationController;
   late Animation<double> _fadeAnimation;
@@ -61,6 +63,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
     _scrollController.dispose();
     _fadeAnimationController.dispose();
     _tabController.dispose();
+    _audioPlayer?.pause();
+    _audioPlayer = null;
     super.dispose();
   }
 
@@ -80,7 +84,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
   }
 
   Future<void> _loadAudio() async {
-    if (widget.reportData['audio_url'] != null) {
+    // Check both audioUrl (camelCase from user app) and audio_url (snake_case legacy)
+    if (widget.reportData['audioUrl'] != null || widget.reportData['audio_url'] != null) {
       _audioUrl = await AdminReportService.getAudioDownloadUrl(widget.caseId);
     }
     setState(() {});
@@ -1346,6 +1351,11 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
     setState(() => _updating = true);
     
     try {
+      print('🔄 Attempting to update status to: $_selectedStatus');
+      print('Admin ID: ${_adminInfo?['uid']}');
+      print('Admin Email: ${_adminInfo?['email']}');
+      print('Case ID: ${widget.caseId}');
+      
       final success = await AdminReportService.updateReportStatus(
         caseId: widget.caseId,
         status: _selectedStatus,
@@ -1356,18 +1366,46 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
       if (success) {
         _statusMessage.clear();
         await _loadTimeline(); // Refresh timeline
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Status updated successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } on FirebaseException catch (e) {
+      print('❌ Firebase error: ${e.code} - ${e.message}');
+      if (mounted) {
+        String errorMessage = 'Failed to update status: ';
+        if (e.code == 'permission-denied') {
+          errorMessage += 'Permission denied. Make sure you are logged in as an admin.';
+        } else if (e.code == 'not-found') {
+          errorMessage += 'Report not found.';
+        } else {
+          errorMessage += '${e.code} - ${e.message}';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Status updated successfully')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update status')),
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 6),
+          ),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      print('❌ Error updating status: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating status: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
     }
     
     setState(() => _updating = false);
@@ -1402,24 +1440,25 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
   }
 
   Future<void> _playAudio(String url) async {
-    setState(() => _playingAudio = true);
-    
     try {
-      final Uri uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cannot open audio file')),
+      // Show audio player dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (context) => _AudioPlayerDialog(url: url),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error playing audio: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading audio: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
-    
-    setState(() => _playingAudio = false);
   }
 
   void _openMapLocation(double latitude, double longitude) async {
@@ -1450,6 +1489,285 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
     // TODO: Implement case export functionality
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Export functionality will be implemented')),
+    );
+  }
+}
+
+// Audio Player Dialog Widget
+class _AudioPlayerDialog extends StatefulWidget {
+  final String url;
+
+  const _AudioPlayerDialog({required this.url});
+
+  @override
+  State<_AudioPlayerDialog> createState() => _AudioPlayerDialogState();
+}
+
+class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
+  html.AudioElement? _audioPlayer;
+  bool _isPlaying = false;
+  bool _isLoading = true;
+  String? _errorMessage;
+  bool _isMockAudio = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAudio();
+  }
+
+  void _initializeAudio() {
+    try {
+      _audioPlayer = html.AudioElement(widget.url);
+      _audioPlayer!.preload = 'auto';
+      
+      // Listen to events
+      _audioPlayer!.onLoadedData.listen((_) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      });
+      
+      _audioPlayer!.onError.listen((error) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _isMockAudio = true;
+            _errorMessage = 'This appears to be a test/mock audio file';
+          });
+        }
+      });
+      
+      _audioPlayer!.onPlay.listen((_) {
+        if (mounted) {
+          setState(() => _isPlaying = true);
+        }
+      });
+      
+      _audioPlayer!.onPause.listen((_) {
+        if (mounted) {
+          setState(() => _isPlaying = false);
+        }
+      });
+      
+      _audioPlayer!.onEnded.listen((_) {
+        if (mounted) {
+          setState(() => _isPlaying = false);
+        }
+      });
+      
+      // Load the audio
+      _audioPlayer!.load();
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Error initializing audio player: $e';
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer?.pause();
+    _audioPlayer = null;
+    super.dispose();
+  }
+
+  void _togglePlayPause() {
+    if (_audioPlayer == null) return;
+    
+    if (_isPlaying) {
+      _audioPlayer!.pause();
+    } else {
+      _audioPlayer!.play();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Row(
+        children: [
+          const Icon(Icons.audiotrack, color: AppColors.primary),
+          const SizedBox(width: 12),
+          const Expanded(child: Text('Audio Recording')),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+      content: Container(
+        width: 400,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_isLoading)
+              Column(
+                children: const [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading audio...'),
+                ],
+              )
+            else if (_errorMessage != null || _isMockAudio)
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, size: 64, color: Colors.orange),
+                        const SizedBox(height: 16),
+                        Text(
+                          _errorMessage ?? 'Test Audio File',
+                          style: const TextStyle(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'This audio file cannot be played because:',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '• It\'s a mock/test audio file created for development\n'
+                          '• It doesn\'t contain actual audio data\n'
+                          '• The M4A format may not be fully supported',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                        ),
+                        const SizedBox(height: 20),
+                        const Divider(),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Solutions:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '1. Enable real audio recording on the user app\n'
+                          '2. Test with actual voice recordings\n'
+                          '3. Check Firebase Storage for file validity',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final Uri uri = Uri.parse(widget.url);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: const Text('Try opening in new tab'),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // Try playing anyway
+                          setState(() {
+                            _errorMessage = null;
+                            _isMockAudio = false;
+                          });
+                          _audioPlayer?.play().catchError((e) {
+                            if (mounted) {
+                              setState(() {
+                                _errorMessage = 'Playback failed: $e';
+                              });
+                            }
+                          });
+                        },
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Try anyway'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            else
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    child: Icon(
+                      _isPlaying ? Icons.volume_up : Icons.headset,
+                      size: 64,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: _togglePlayPause,
+                        icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+                        label: Text(_isPlaying ? 'Pause' : 'Play'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          _audioPlayer?.pause();
+                          _audioPlayer?.currentTime = 0;
+                          setState(() => _isPlaying = false);
+                        },
+                        icon: const Icon(Icons.stop),
+                        label: const Text('Stop'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  TextButton.icon(
+                    onPressed: () async {
+                      final Uri uri = Uri.parse(widget.url);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    icon: const Icon(Icons.download, size: 16),
+                    label: const Text('Download / Open in new tab'),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
