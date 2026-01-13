@@ -83,20 +83,36 @@ class MainActivity : FlutterActivity() {
     private fun requestFreshLocation(result: MethodChannel.Result) {
         val locationRequest = LocationRequest.create().apply {
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-            interval = 10000
-            fastestInterval = 5000
-            numUpdates = 1
+            interval = 1000  // Check every second for better accuracy
+            fastestInterval = 500  // Accept updates every 500ms
+            maxWaitTime = 2000  // Wait max 2 seconds
+            numUpdates = 3  // Get multiple readings for better accuracy
+            smallestDisplacement = 0f  // Accept even tiny movements for precision
         }
 
         val locationCallback = object : LocationCallback() {
+            private var bestLocation: Location? = null
+            private var updateCount = 0
+            
             override fun onLocationResult(locationResult: LocationResult) {
                 val location = locationResult.lastLocation
+                updateCount++
+                
                 if (location != null) {
-                    getAddressFromLocation(location, result)
-                } else {
+                    // Keep the most accurate location from multiple readings
+                    if (bestLocation == null || location.accuracy < (bestLocation?.accuracy ?: Float.MAX_VALUE)) {
+                        bestLocation = location
+                    }
+                    
+                    // After 3 updates or if we get very accurate reading (<10m), use best location
+                    if (updateCount >= 3 || location.accuracy < 10f) {
+                        fusedLocationClient.removeLocationUpdates(this)
+                        getAddressFromLocation(bestLocation ?: location, result)
+                    }
+                } else if (updateCount >= 3) {
+                    fusedLocationClient.removeLocationUpdates(this)
                     result.success("Unable to detect precise location")
                 }
-                fusedLocationClient.removeLocationUpdates(this)
             }
         }
 
@@ -176,25 +192,33 @@ class MainActivity : FlutterActivity() {
                     // Build final address string
                     val addressText = addressParts.joinToString(", ")
                     
-                    // Add coordinates for precision
-                    val preciseLocation = "$addressText (${String.format("%.6f", location.latitude)}, ${String.format("%.6f", location.longitude)})"
+                    // Add coordinates with accuracy for precision
+                    val coords = "${String.format("%.7f", location.latitude)}, ${String.format("%.7f", location.longitude)}"
+                    val accuracy = "±${String.format("%.1f", location.accuracy)}m"
+                    val preciseLocation = "$addressText ($coords) [Accuracy: $accuracy]"
                     
                     if (addressText.isNotEmpty()) {
                         result.success(preciseLocation)
                     } else {
-                        result.success("${String.format("%.6f", location.latitude)}, ${String.format("%.6f", location.longitude)}")
+                        result.success("$coords [Accuracy: $accuracy]")
                     }
                 } else {
-                    // Return coordinates if geocoding fails
-                    result.success("${String.format("%.6f", location.latitude)}, ${String.format("%.6f", location.longitude)}")
+                    // Return coordinates with accuracy if geocoding fails
+                    val coords = "${String.format("%.7f", location.latitude)}, ${String.format("%.7f", location.longitude)}"
+                    val accuracy = "±${String.format("%.1f", location.accuracy)}m"
+                    result.success("$coords [Accuracy: $accuracy]")
                 }
             } else {
-                // Geocoder not available, return coordinates
-                result.success("${String.format("%.6f", location.latitude)}, ${String.format("%.6f", location.longitude)}")
+                // Geocoder not available, return coordinates with accuracy
+                val coords = "${String.format("%.7f", location.latitude)}, ${String.format("%.7f", location.longitude)}"
+                val accuracy = "±${String.format("%.1f", location.accuracy)}m"
+                result.success("$coords [Accuracy: $accuracy]")
             }
         } catch (e: Exception) {
-            // On error, return coordinates
-            result.success("${String.format("%.6f", location.latitude)}, ${String.format("%.6f", location.longitude)}")
+            // On error, return coordinates with accuracy
+            val coords = "${String.format("%.7f", location.latitude)}, ${String.format("%.7f", location.longitude)}"
+            val accuracy = "±${String.format("%.1f", location.accuracy)}m"
+            result.success("$coords [Accuracy: $accuracy]")
         }
     }
 
