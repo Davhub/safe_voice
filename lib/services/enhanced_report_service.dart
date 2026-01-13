@@ -31,6 +31,7 @@ class EnhancedReportService {
   /// Submit a text report with offline support
   static Future<String> submitTextReport({
     required String reportText,
+    String? caseType, // NEW: Case type (FGM, SEXUAL_ASSAULT, GBV)
     String? location,
     DateTime? incidentDate,
     List<String>? attachmentPaths,
@@ -46,6 +47,7 @@ class EnhancedReportService {
         try {
           String submittedCaseId = await ReportService.submitTextReport(
             reportText: reportText,
+            caseType: caseType,
             location: location,
             incidentDate: incidentDate,
             attachmentUrls: attachmentPaths,
@@ -61,6 +63,7 @@ class EnhancedReportService {
           await OfflineStorageService.storeTextReportOffline(
             caseId: caseId,
             reportText: reportText,
+            caseType: caseType,
             location: location,
             incidentDate: incidentDate,
             attachmentPaths: attachmentPaths,
@@ -77,6 +80,7 @@ class EnhancedReportService {
         await OfflineStorageService.storeTextReportOffline(
           caseId: caseId,
           reportText: reportText,
+          caseType: caseType,
           location: location,
           incidentDate: incidentDate,
           attachmentPaths: attachmentPaths,
@@ -90,6 +94,7 @@ class EnhancedReportService {
       await OfflineStorageService.storeTextReportOffline(
         caseId: caseId,
         reportText: reportText,
+        caseType: caseType,
         location: location,
         incidentDate: incidentDate,
         attachmentPaths: attachmentPaths,
@@ -103,6 +108,7 @@ class EnhancedReportService {
   static Future<String> submitVoiceReport({
     required File audioFile,
     String? additionalText,
+    String? caseType, // NEW: Case type (FGM, SEXUAL_ASSAULT, GBV)
     String? location,
     DateTime? incidentDate,
   }) async {
@@ -118,6 +124,7 @@ class EnhancedReportService {
           String submittedCaseId = await ReportService.submitVoiceReport(
             audioFile: audioFile,
             additionalText: additionalText,
+            caseType: caseType,
             location: location,
             incidentDate: incidentDate,
           ).timeout(Duration(seconds: 30)); // Increased timeout to 30 seconds for voice files
@@ -133,6 +140,7 @@ class EnhancedReportService {
             caseId: caseId,
             audioFilePath: audioFile.path,
             additionalText: additionalText,
+            caseType: caseType,
             location: location,
             incidentDate: incidentDate,
           );
@@ -149,6 +157,7 @@ class EnhancedReportService {
           caseId: caseId,
           audioFilePath: audioFile.path,
           additionalText: additionalText,
+          caseType: caseType,
           location: location,
           incidentDate: incidentDate,
         );
@@ -162,6 +171,7 @@ class EnhancedReportService {
         caseId: caseId,
         audioFilePath: audioFile.path,
         additionalText: additionalText,
+        caseType: caseType,
         location: location,
         incidentDate: incidentDate,
       );
@@ -209,6 +219,7 @@ class EnhancedReportService {
             
             await ReportService.submitTextReport(
               reportText: report['reportText'] ?? '',
+              caseType: report['caseType'] ?? 'FGM', // Include caseType from offline storage
               location: report['location'],
               incidentDate: report['incidentDate'] != null ? 
                 DateTime.parse(report['incidentDate']) : null,
@@ -225,6 +236,7 @@ class EnhancedReportService {
               await ReportService.submitVoiceReport(
                 audioFile: audioFile,
                 additionalText: report['additionalText'],
+                caseType: report['caseType'] ?? 'FGM', // Include caseType from offline storage
                 location: report['location'],
                 incidentDate: report['incidentDate'] != null ? 
                   DateTime.parse(report['incidentDate']) : null,

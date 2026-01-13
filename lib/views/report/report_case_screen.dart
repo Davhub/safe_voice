@@ -6,6 +6,7 @@ import 'package:safe_voice/services/services.dart';
 import 'package:safe_voice/services/enhanced_report_service.dart';
 import 'package:safe_voice/services/audio_service.dart';
 import 'package:safe_voice/services/native_location_service.dart';
+import 'package:safe_voice/models/report.dart'; // Import for CaseType enum
 
 class ReportCaseScreen extends StatefulWidget {
   final bool showBack;
@@ -31,6 +32,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
   bool _isRefreshingLocation = false;
   String _networkStatus = 'Checking...';
   int _pendingReportsCount = 0;
+  CaseType _selectedCaseType = CaseType.FGM; // NEW: Selected case type
 
   @override
   void initState() {
@@ -302,6 +304,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
       // Submit voice report using enhanced service with offline support
       String caseId = await EnhancedReportService.submitVoiceReport(
         audioFile: file,
+        caseType: _selectedCaseType.value, // Include selected case type
         location: locationToSubmit, // Include current location
         incidentDate: DateTime.now(),
       );
@@ -362,6 +365,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
       // Submit report using enhanced service with offline support
       String caseId = await EnhancedReportService.submitTextReport(
         reportText: _reportController.text.trim(),
+        caseType: _selectedCaseType.value, // Include selected case type
         location: locationToSubmit, // Include current location
         incidentDate: DateTime.now(),
       );
@@ -1058,6 +1062,96 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                       fontSize: 14,
                       color: AppColors.textSecondary,
                     ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Case Type Selector - NEW
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.category_outlined,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Case Type *',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppColors.primary.withOpacity(0.2),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: DropdownButtonFormField<CaseType>(
+                          value: _selectedCaseType,
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.report_problem_outlined,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
+                          ),
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          dropdownColor: AppColors.card,
+                          isExpanded: true,
+                          items: CaseType.all.map((CaseType caseType) {
+                            return DropdownMenuItem<CaseType>(
+                              value: caseType,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    caseType.displayName,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  Text(
+                                    caseType.description,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (CaseType? newValue) {
+                            if (newValue != null) {
+                              setState(() {
+                                _selectedCaseType = newValue;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
                   // Modern text field

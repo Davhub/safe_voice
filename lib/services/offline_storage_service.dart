@@ -28,6 +28,7 @@ class OfflineStorageService {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             caseId TEXT NOT NULL,
             type TEXT NOT NULL,
+            caseType TEXT DEFAULT 'FGM',
             reportText TEXT,
             audioFilePath TEXT,
             additionalText TEXT,
@@ -47,6 +48,7 @@ class OfflineStorageService {
   static Future<String> storeTextReportOffline({
     required String caseId,
     required String reportText,
+    String? caseType,
     String? location,
     DateTime? incidentDate,
     List<String>? attachmentPaths,
@@ -56,6 +58,7 @@ class OfflineStorageService {
     Map<String, dynamic> report = {
       'caseId': caseId,
       'type': 'text',
+      'caseType': caseType ?? 'FGM',
       'reportText': reportText,
       'location': location,
       'incidentDate': incidentDate?.toIso8601String(),
@@ -72,6 +75,7 @@ class OfflineStorageService {
     required String caseId,
     required String audioFilePath,
     String? additionalText,
+    String? caseType,
     String? location,
     DateTime? incidentDate,
   }) async {
@@ -80,6 +84,7 @@ class OfflineStorageService {
     Map<String, dynamic> report = {
       'caseId': caseId,
       'type': 'voice',
+      'caseType': caseType ?? 'FGM',
       'audioFilePath': audioFilePath,
       'additionalText': additionalText,
       'location': location,

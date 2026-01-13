@@ -2,6 +2,7 @@
 class Report {
   final String caseId;
   final ReportType type;
+  final CaseType caseType; // NEW: Type of case (FGM, Sexual Assault, GBV)
   final String? content; // Text content for text reports
   final String? audioUrl; // URL for voice reports
   final String? location;
@@ -14,6 +15,7 @@ class Report {
   Report({
     required this.caseId,
     required this.type,
+    this.caseType = CaseType.FGM, // Default to FGM for backward compatibility
     this.content,
     this.audioUrl,
     this.location,
@@ -29,6 +31,7 @@ class Report {
     return Report(
       caseId: map['caseId'] ?? '',
       type: ReportType.fromString(map['type'] ?? 'text'),
+      caseType: CaseType.fromString(map['caseType'] ?? map['case_type'] ?? 'FGM'),
       content: map['content'],
       audioUrl: map['audioUrl'],
       location: map['location'],
@@ -47,6 +50,8 @@ class Report {
     return {
       'caseId': caseId,
       'type': type.toString(),
+      'caseType': caseType.value, // Store as string value
+      'case_type': caseType.value, // Also store snake_case for consistency
       'content': content,
       'audioUrl': audioUrl,
       'location': location,
@@ -62,6 +67,7 @@ class Report {
   Report copyWith({
     String? caseId,
     ReportType? type,
+    CaseType? caseType,
     String? content,
     String? audioUrl,
     String? location,
@@ -74,6 +80,7 @@ class Report {
     return Report(
       caseId: caseId ?? this.caseId,
       type: type ?? this.type,
+      caseType: caseType ?? this.caseType,
       content: content ?? this.content,
       audioUrl: audioUrl ?? this.audioUrl,
       location: location ?? this.location,
@@ -84,6 +91,44 @@ class Report {
       anonymous: anonymous ?? this.anonymous,
     );
   }
+}
+
+/// Category/Type of case being reported
+enum CaseType {
+  FGM('FGM', 'Female Genital Mutilation', 'FGM-related incidents'),
+  SEXUAL_ASSAULT('SEXUAL_ASSAULT', 'Sexual Assault', 'Sexual assault and abuse cases'),
+  GBV('GBV', 'Gender-Based Violence', 'Gender-based violence cases');
+
+  final String value;
+  final String displayName;
+  final String description;
+
+  const CaseType(this.value, this.displayName, this.description);
+
+  static CaseType fromString(String value) {
+    switch (value.toUpperCase().replaceAll(' ', '_')) {
+      case 'FGM':
+      case 'FEMALE_GENITAL_MUTILATION':
+        return CaseType.FGM;
+      case 'SEXUAL_ASSAULT':
+      case 'SEXUALASSAULT':
+      case 'SEXUAL ASSAULT':
+        return CaseType.SEXUAL_ASSAULT;
+      case 'GBV':
+      case 'GENDER_BASED_VIOLENCE':
+      case 'GENDERBASED VIOLENCE':
+      case 'GENDER-BASED VIOLENCE':
+        return CaseType.GBV;
+      default:
+        return CaseType.FGM; // Default for backward compatibility
+    }
+  }
+
+  @override
+  String toString() => value;
+  
+  /// Get all case types for UI selection
+  static List<CaseType> get all => [FGM, SEXUAL_ASSAULT, GBV];
 }
 
 /// Type of report submitted

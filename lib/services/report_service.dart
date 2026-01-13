@@ -12,6 +12,7 @@ class ReportService {
   /// Submit an anonymous text report
   static Future<String> submitTextReport({
     required String reportText,
+    String? caseType, // NEW: Case type (FGM, SEXUAL_ASSAULT, GBV)
     String? location,
     DateTime? incidentDate,
     List<String>? attachmentUrls,
@@ -24,6 +25,8 @@ class ReportService {
       Map<String, dynamic> reportData = {
         'caseId': caseId,
         'type': 'text',
+        'caseType': caseType ?? 'FGM', // Default to FGM for backward compatibility
+        'case_type': caseType ?? 'FGM', // Also store snake_case for consistency
         'content': reportText,
         'location': location,
         'incidentDate': incidentDate?.toIso8601String(),
@@ -69,6 +72,7 @@ class ReportService {
   static Future<String> submitVoiceReport({
     required File audioFile,
     String? additionalText,
+    String? caseType, // NEW: Case type (FGM, SEXUAL_ASSAULT, GBV)
     String? location,
     DateTime? incidentDate,
   }) async {
@@ -96,6 +100,8 @@ class ReportService {
       Map<String, dynamic> reportData = {
         'caseId': caseId,
         'type': 'voice',
+        'caseType': caseType ?? 'FGM', // Default to FGM for backward compatibility
+        'case_type': caseType ?? 'FGM', // Also store snake_case for consistency
         'audioUrl': audioUrl,
         'additionalText': additionalText,
         'location': location,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:safe_voice/admin/widgets/report_list_widget.dart';
 import 'package:safe_voice/admin/widgets/dashboard_stats_widget.dart';
+import 'package:safe_voice/admin/widgets/analytics_widget.dart';
 import 'package:safe_voice/admin/widgets/notifications_widget.dart';
 import 'package:safe_voice/admin/widgets/settings_widget.dart';
 import 'package:safe_voice/admin/services/admin_auth_service.dart';
@@ -32,6 +33,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
       icon: Icons.dashboard_rounded,
       label: 'Overview',
       description: 'Dashboard & Statistics',
+    ),
+    NavigationItem(
+      icon: Icons.analytics_rounded,
+      label: 'Analytics',
+      description: 'Reports & Trends',
     ),
     NavigationItem(
       icon: Icons.notifications_active_rounded,
@@ -413,13 +419,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
     switch (_selectedIndex) {
       case 0: // Overview
         return const DashboardStatsWidget();
-      case 1: // Notifications
+      case 1: // Analytics
+        return const AnalyticsWidget();
+      case 2: // Notifications
         return const NotificationsWidget();
-      case 2: // All Reports
+      case 3: // All Reports
         return const ReportListWidget();
-      case 3: // Resolved
+      case 4: // Resolved
         return const ReportListWidget(status: 'resolved');
-      case 4: // Settings
+      case 5: // Settings
         return const SettingsWidget();
       default:
         return const DashboardStatsWidget();
