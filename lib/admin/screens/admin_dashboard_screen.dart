@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:safe_voice/admin/widgets/report_list_widget.dart';
 import 'package:safe_voice/admin/widgets/dashboard_stats_widget.dart';
-import 'package:safe_voice/admin/widgets/analytics_widget.dart';
+import 'package:safe_voice/admin/widgets/usage_analytics_widget.dart';
 import 'package:safe_voice/admin/widgets/notifications_widget.dart';
 import 'package:safe_voice/admin/widgets/settings_widget.dart';
 import 'package:safe_voice/admin/services/admin_auth_service.dart';
@@ -19,12 +19,13 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen> with TickerProviderStateMixin {
+class _AdminDashboardScreenState extends State<AdminDashboardScreen>
+    with TickerProviderStateMixin {
   int _selectedIndex = 0;
   Map<String, dynamic>? _adminInfo;
   bool _isLoading = true;
   static const String _selectedIndexKey = 'admin_selected_tab';
-  
+
   late AnimationController _slideAnimationController;
   late Animation<Offset> _slideAnimation;
 
@@ -49,7 +50,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
       label: 'All Reports',
       description: 'View all submitted reports',
     ),
-    
+
     NavigationItem(
       icon: Icons.check_circle_rounded,
       label: 'Resolved',
@@ -72,23 +73,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideAnimationController,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(
+      CurvedAnimation(
+        parent: _slideAnimationController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
     _loadAdminInfo();
-    _loadSelectedIndex();  // Load saved tab
-    
+    _loadSelectedIndex(); // Load saved tab
+
     // Initialize Firestore collections with sample data if needed
     FirestoreInitService.initializeAdminCollections();
-    
+
     // Initialize activities collection if empty
     AdminActivityService.initializeActivities();
-    
+
     // Start listening to report changes
     ReportListenerService.startListening();
   }
-  
+
   Future<void> _loadSelectedIndex() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -102,7 +105,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
       // If fails, just stay on default tab
     }
   }
-  
+
   Future<void> _saveSelectedIndex(int index) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -143,32 +146,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
         children: [
           // Dark Sidebar Navigation (bSafe style)
           if (!isMobile) _buildDarkSidebar(),
-          
+
           // Main Content Area
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : SlideTransition(
-                    position: _slideAnimation,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(30.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDashboardHeader(),
-                          const SizedBox(height: 30),
-                          _buildPageTitle(),
-                          const SizedBox(height: 20),
-                          _buildMainContent(),
-                          const SizedBox(height: 50), // Bottom spacing
-                        ],
+            child:
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : SlideTransition(
+                      position: _slideAnimation,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(30.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildDashboardHeader(),
+                            const SizedBox(height: 30),
+                            _buildPageTitle(),
+                            const SizedBox(height: 20),
+                            _buildMainContent(),
+                            const SizedBox(height: 50), // Bottom spacing
+                          ],
+                        ),
                       ),
                     ),
-                  ),
           ),
         ],
       ),
-      
+
       // Mobile drawer
       drawer: isMobile ? _buildMobileDrawer() : null,
     );
@@ -202,11 +206,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Image.asset(
-                      'assets/pngs/Logo.png',
-                      width: 80,
-                      height: 80,
-                      
-                    ),
+                    'assets/pngs/Logo.png',
+                    width: 80,
+                    height: 80,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Text(
@@ -221,7 +224,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
             ),
           ),
           const Divider(color: Colors.white24),
-          
+
           // Navigation items
           Expanded(
             child: ListView.builder(
@@ -230,11 +233,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
               itemBuilder: (context, index) {
                 final item = _navigationItems[index];
                 final isSelected = _selectedIndex == index;
-                
+
                 return Container(
                   margin: const EdgeInsets.only(right: 15, bottom: 5),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF1E3A8A) : Colors.transparent,
+                    color:
+                        isSelected
+                            ? const Color(0xFF1E3A8A)
+                            : Colors.transparent,
                     borderRadius: const BorderRadius.only(
                       topRight: Radius.circular(8),
                       bottomRight: Radius.circular(8),
@@ -250,29 +256,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                       item.label,
                       style: TextStyle(
                         color: isSelected ? Colors.white : Colors.white70,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
                         fontSize: 14,
                       ),
                     ),
-                    subtitle: item.description != null
-                        ? Text(
-                            item.description!,
-                            style: TextStyle(
-                              color: isSelected ? Colors.white60 : Colors.white54,
-                              fontSize: 11,
-                            ),
-                          )
-                        : null,
+                    subtitle:
+                        item.description != null
+                            ? Text(
+                              item.description!,
+                              style: TextStyle(
+                                color:
+                                    isSelected
+                                        ? Colors.white60
+                                        : Colors.white54,
+                                fontSize: 11,
+                              ),
+                            )
+                            : null,
                     onTap: () {
                       setState(() => _selectedIndex = index);
-                      _saveSelectedIndex(index);  // Persist tab selection
+                      _saveSelectedIndex(index); // Persist tab selection
                     },
                   ),
                 );
               },
             ),
           ),
-          
+
           // Admin User Panel at bottom
           _buildAdminUserPanel(),
         ],
@@ -283,16 +294,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
   Widget _buildAdminUserPanel() {
     return Container(
       padding: const EdgeInsets.all(16.0),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1E3A8A),
-      ),
+      decoration: const BoxDecoration(color: Color(0xFF1E3A8A)),
       child: Row(
         children: [
           CircleAvatar(
             backgroundColor: Colors.teal,
             radius: 20,
             child: Text(
-              (_adminInfo?['email'] as String?)?.substring(0, 1).toUpperCase() ?? 'A',
+              (_adminInfo?['email'] as String?)
+                      ?.substring(0, 1)
+                      .toUpperCase() ??
+                  'A',
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -315,36 +327,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                 ),
                 const Text(
                   'System Administrator',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],
             ),
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white70),
-            itemBuilder: (context) => [
-              
-              const PopupMenuItem(
-                value: 'settings',
-                child: ListTile(
-                  leading: Icon(Icons.settings),
-                  title: Text('Settings'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'logout',
-                child: ListTile(
-                  leading: Icon(Icons.logout, color: Colors.red),
-                  title: Text('Sign Out', style: TextStyle(color: Colors.red)),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
+            itemBuilder:
+                (context) => [
+                  const PopupMenuItem(
+                    value: 'settings',
+                    child: ListTile(
+                      leading: Icon(Icons.settings),
+                      title: Text('Settings'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'logout',
+                    child: ListTile(
+                      leading: Icon(Icons.logout, color: Colors.red),
+                      title: Text(
+                        'Sign Out',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
             onSelected: (value) async {
               if (value == 'logout') {
                 await AdminAuthService.adminLogout();
@@ -361,29 +373,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _adminInfo?['name'] ?? 'Admin User',
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-                const Text(
-                  'System Administrator',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _adminInfo?['name'] ?? 'Admin User',
+              style: const TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
             ),
+            const Text(
+              'System Administrator',
+              style: TextStyle(color: Colors.black, fontSize: 12),
+            ),
+          ],
+        ),
 
-            const SizedBox(width:10),
-        
+        const SizedBox(width: 10),
+
         // Profile (simplified for header)
         Container(
           width: 45,
@@ -392,14 +401,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
             color: AppColors.primary,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(
-            Icons.person_rounded,
-            color: Colors.white,
-          ),
+          child: const Icon(Icons.person_rounded, color: Colors.white),
         ),
-        
 
-        Divider(color: Colors.grey,),
+        Divider(color: Colors.grey),
       ],
     );
   }
@@ -420,7 +425,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
       case 0: // Overview
         return const DashboardStatsWidget();
       case 1: // Analytics
-        return const AnalyticsWidget();
+        return const UsageAnalyticsWidget();
       case 2: // Notifications
         return const NotificationsWidget();
       case 3: // All Reports
@@ -477,10 +482,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
           Text(
             'This feature is currently under development and will be available in the next update.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
         ],
       ),
@@ -537,9 +539,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                 ),
               ),
             ),
-            
+
             const Divider(color: Colors.white24),
-            
+
             // Navigation items
             Expanded(
               child: ListView.builder(
@@ -548,7 +550,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                 itemBuilder: (context, index) {
                   final item = _navigationItems[index];
                   final isSelected = _selectedIndex == index;
-                  
+
                   return ListTile(
                     leading: Icon(
                       item.icon,
@@ -558,32 +560,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Ticker
                       item.label,
                       style: TextStyle(
                         color: isSelected ? Colors.white : Colors.white70,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.normal,
                       ),
                     ),
-                    subtitle: item.description != null
-                        ? Text(
-                            item.description!,
-                            style: const TextStyle(color: Colors.white54, fontSize: 12),
-                          )
-                        : null,
+                    subtitle:
+                        item.description != null
+                            ? Text(
+                              item.description!,
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
+                              ),
+                            )
+                            : null,
                     selected: isSelected,
                     selectedTileColor: const Color(0xFF1E3A8A),
                     onTap: () {
                       setState(() => _selectedIndex = index);
-                      _saveSelectedIndex(index);  // Persist tab selection
+                      _saveSelectedIndex(index); // Persist tab selection
                       Navigator.pop(context);
                     },
                   );
                 },
               ),
             ),
-            
+
             // Logout
             const Divider(color: Colors.white24),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+              title: const Text(
+                'Sign Out',
+                style: TextStyle(color: Colors.red),
+              ),
               onTap: () async {
                 Navigator.pop(context);
                 await AdminAuthService.adminLogout();
@@ -602,9 +612,5 @@ class NavigationItem {
   final String label;
   final String? description;
 
-  NavigationItem({
-    required this.icon,
-    required this.label,
-    this.description,
-  });
+  NavigationItem({required this.icon, required this.label, this.description});
 }

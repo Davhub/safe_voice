@@ -5,10 +5,7 @@ class AdminMessageService {
 
   /// Get real-time stream of admin messages
   static Stream<QuerySnapshot> getMessagesStream() {
-    return _firestore
-        .collection('admin_messages')
-        .limit(50)
-        .snapshots();
+    return _firestore.collection('admin_messages').limit(50).snapshots();
   }
 
   /// Get unread message count
@@ -35,10 +32,11 @@ class AdminMessageService {
   /// Mark all messages as read
   static Future<void> markAllAsRead() async {
     try {
-      final unreadMessages = await _firestore
-          .collection('admin_messages')
-          .where('isRead', isEqualTo: false)
-          .get();
+      final unreadMessages =
+          await _firestore
+              .collection('admin_messages')
+              .where('isRead', isEqualTo: false)
+              .get();
 
       final batch = _firestore.batch();
       for (var doc in unreadMessages.docs) {
@@ -90,7 +88,7 @@ class AdminMessageService {
   /// Format timestamp
   static String formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return 'Unknown';
-    
+
     final now = DateTime.now();
     final dateTime = timestamp.toDate();
     final difference = now.difference(dateTime);

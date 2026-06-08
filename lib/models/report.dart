@@ -31,13 +31,16 @@ class Report {
     return Report(
       caseId: map['caseId'] ?? '',
       type: ReportType.fromString(map['type'] ?? 'text'),
-      caseType: CaseType.fromString(map['caseType'] ?? map['case_type'] ?? 'FGM'),
+      caseType: CaseType.fromString(
+        map['caseType'] ?? map['case_type'] ?? 'FGM',
+      ),
       content: map['content'],
       audioUrl: map['audioUrl'],
       location: map['location'],
-      incidentDate: map['incidentDate'] != null 
-          ? DateTime.parse(map['incidentDate']) 
-          : null,
+      incidentDate:
+          map['incidentDate'] != null
+              ? DateTime.parse(map['incidentDate'])
+              : null,
       submittedAt: map['submittedAt']?.toDate() ?? DateTime.now(),
       attachments: List<String>.from(map['attachments'] ?? []),
       status: ReportStatus.fromString(map['status'] ?? 'submitted'),
@@ -96,7 +99,11 @@ class Report {
 /// Category/Type of case being reported
 enum CaseType {
   FGM('FGM', 'Female Genital Mutilation', 'FGM-related incidents'),
-  SEXUAL_ASSAULT('SEXUAL_ASSAULT', 'Sexual Assault', 'Sexual assault and abuse cases'),
+  SEXUAL_ASSAULT(
+    'SEXUAL_ASSAULT',
+    'Sexual Assault',
+    'Sexual assault and abuse cases',
+  ),
   GBV('GBV', 'Gender-Based Violence', 'Gender-based violence cases');
 
   final String value;
@@ -126,7 +133,7 @@ enum CaseType {
 
   @override
   String toString() => value;
-  
+
   /// Get all case types for UI selection
   static List<CaseType> get all => [FGM, SEXUAL_ASSAULT, GBV];
 }

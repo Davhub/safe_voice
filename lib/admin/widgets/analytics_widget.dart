@@ -61,9 +61,7 @@ class _AnalyticsWidgetState extends State<AnalyticsWidget> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+      return Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
 
     if (_analyticsData == null) {
@@ -81,14 +79,9 @@ class _AnalyticsWidgetState extends State<AnalyticsWidget> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                flex: 2,
-                child: _buildCaseTypeDistribution(),
-              ),
+              Expanded(flex: 2, child: _buildCaseTypeDistribution()),
               const SizedBox(width: 24),
-              Expanded(
-                child: _buildTopLocations(),
-              ),
+              Expanded(child: _buildTopLocations()),
             ],
           ),
           const SizedBox(height: 24),
@@ -107,8 +100,11 @@ class _AnalyticsWidgetState extends State<AnalyticsWidget> {
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_rounded,
-                color: AppColors.primary, size: 20),
+            Icon(
+              Icons.calendar_today_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
             const SizedBox(width: 12),
             Text(
               'Period:',
@@ -119,32 +115,32 @@ class _AnalyticsWidgetState extends State<AnalyticsWidget> {
               ),
             ),
             const SizedBox(width: 16),
-            ...[
-              'Today',
-              'Week',
-              'Month'
-            ].map((period) => Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: ChoiceChip(
-                    label: Text(period),
-                    selected: _selectedPeriod == period,
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() => _selectedPeriod = period);
-                        _loadAnalytics();
-                      }
-                    },
-                    selectedColor: AppColors.primary,
-                    labelStyle: TextStyle(
-                      color: _selectedPeriod == period
-                          ? Colors.white
-                          : AppColors.textSecondary,
-                      fontWeight: _selectedPeriod == period
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                    ),
+            ...['Today', 'Week', 'Month'].map(
+              (period) => Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ChoiceChip(
+                  label: Text(period),
+                  selected: _selectedPeriod == period,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() => _selectedPeriod = period);
+                      _loadAnalytics();
+                    }
+                  },
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    color:
+                        _selectedPeriod == period
+                            ? Colors.white
+                            : AppColors.textSecondary,
+                    fontWeight:
+                        _selectedPeriod == period
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                   ),
-                )),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -160,9 +156,12 @@ class _AnalyticsWidgetState extends State<AnalyticsWidget> {
         _analyticsData?['comparison'] as Map<String, dynamic>? ?? {};
 
     final totalReports = caseTypeCounts.values.fold<int>(
-        0, (sum, count) => sum + (count as int? ?? 0));
+      0,
+      (sum, count) => sum + (count as int? ?? 0),
+    );
     final resolvedCount = statusCounts['resolved'] as int? ?? 0;
-    final pendingCount = (statusCounts['submitted'] as int? ?? 0) +
+    final pendingCount =
+        (statusCounts['submitted'] as int? ?? 0) +
         (statusCounts['under_review'] as int? ?? 0);
 
     final percentageChange = comparison['percentageChange'] as double? ?? 0.0;
@@ -232,12 +231,15 @@ class _AnalyticsWidgetState extends State<AnalyticsWidget> {
                 ),
                 if (trend != null)
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: isIncrease!
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.red.withOpacity(0.1),
+                      color:
+                          isIncrease!
+                              ? Colors.green.withOpacity(0.1)
+                              : Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
@@ -266,10 +268,7 @@ class _AnalyticsWidgetState extends State<AnalyticsWidget> {
             const SizedBox(height: 16),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 8),
             Text(
@@ -291,8 +290,7 @@ class _AnalyticsWidgetState extends State<AnalyticsWidget> {
         _analyticsData?['caseTypeCounts'] as Map<String, dynamic>? ?? {};
 
     final fgmCount = caseTypeCounts['FGM'] as int? ?? 0;
-    final sexualAssaultCount =
-        caseTypeCounts['SEXUAL_ASSAULT'] as int? ?? 0;
+    final sexualAssaultCount = caseTypeCounts['SEXUAL_ASSAULT'] as int? ?? 0;
     final gbvCount = caseTypeCounts['GBV'] as int? ?? 0;
     final total = fgmCount + sexualAssaultCount + gbvCount;
 
@@ -307,8 +305,11 @@ class _AnalyticsWidgetState extends State<AnalyticsWidget> {
           children: [
             Row(
               children: [
-                Icon(Icons.pie_chart_rounded,
-                    color: AppColors.primary, size: 22),
+                Icon(
+                  Icons.pie_chart_rounded,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
                 const SizedBox(width: 12),
                 Text(
                   'Case Type Distribution',
@@ -420,10 +421,7 @@ class _AnalyticsWidgetState extends State<AnalyticsWidget> {
               const SizedBox(height: 4),
               Text(
                 '$count reports (${percentage.toStringAsFixed(1)}%)',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -447,8 +445,11 @@ class _AnalyticsWidgetState extends State<AnalyticsWidget> {
           children: [
             Row(
               children: [
-                Icon(Icons.location_on_rounded,
-                    color: AppColors.primary, size: 22),
+                Icon(
+                  Icons.location_on_rounded,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
                 const SizedBox(width: 12),
                 Text(
                   'Top Locations',
@@ -502,7 +503,9 @@ class _AnalyticsWidgetState extends State<AnalyticsWidget> {
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
@@ -559,8 +562,11 @@ class _AnalyticsWidgetState extends State<AnalyticsWidget> {
           children: [
             Row(
               children: [
-                Icon(Icons.timeline_rounded,
-                    color: AppColors.primary, size: 22),
+                Icon(
+                  Icons.timeline_rounded,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
                 const SizedBox(width: 12),
                 Text(
                   'Status Breakdown',
@@ -685,10 +691,7 @@ class _AnalyticsWidgetState extends State<AnalyticsWidget> {
           const SizedBox(height: 8),
           Text(
             'Please try again later',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
@@ -738,17 +741,20 @@ class PieChartPainter extends CustomPainter {
     final total = fgmCount + sexualAssaultCount + gbvCount;
     if (total == 0) return;
 
-    final fgmPaint = Paint()
-      ..color = const Color(0xFFE91E63)
-      ..style = PaintingStyle.fill;
+    final fgmPaint =
+        Paint()
+          ..color = const Color(0xFFE91E63)
+          ..style = PaintingStyle.fill;
 
-    final sexualAssaultPaint = Paint()
-      ..color = const Color(0xFF9C27B0)
-      ..style = PaintingStyle.fill;
+    final sexualAssaultPaint =
+        Paint()
+          ..color = const Color(0xFF9C27B0)
+          ..style = PaintingStyle.fill;
 
-    final gbvPaint = Paint()
-      ..color = const Color(0xFF673AB7)
-      ..style = PaintingStyle.fill;
+    final gbvPaint =
+        Paint()
+          ..color = const Color(0xFF673AB7)
+          ..style = PaintingStyle.fill;
 
     double startAngle = -math.pi / 2;
 
@@ -791,9 +797,10 @@ class PieChartPainter extends CustomPainter {
     }
 
     // Draw white center circle for donut effect
-    final centerPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
+    final centerPaint =
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.fill;
     canvas.drawCircle(center, radius * 0.5, centerPaint);
   }
 

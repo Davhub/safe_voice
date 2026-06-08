@@ -6,7 +6,7 @@ class AppColors {
   static const Color primary = Color(0xFFfe6501);
   static const Color primaryLight = Color(0xFFff8533);
   static const Color primaryDark = Color(0xFFcc5200);
-  
+
   // Secondary Colors
   static const Color secondary = Color(0xFF2196F3);
   static const Color secondaryLight = Color(0xFF64B5F6);
@@ -44,15 +44,11 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: AppColors.primary, width: 2),

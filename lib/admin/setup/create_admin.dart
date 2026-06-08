@@ -15,7 +15,8 @@ Future<void> main() async {
   const name = 'System Administrator';
 
   try {
-    UserCredential cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: email, password: password);
+    UserCredential cred = await FirebaseAuth.instance
+        .createUserWithEmailAndPassword(email: email, password: password);
     final uid = cred.user?.uid;
     if (uid != null) {
       await FirebaseFirestore.instance.collection('admins').doc(uid).set({
@@ -23,7 +24,12 @@ Future<void> main() async {
         'email': email,
         'role': 'Administrator',
         'created_at': FieldValue.serverTimestamp(),
-        'permissions': ['view_reports','update_reports','delete_reports','manage_admins'],
+        'permissions': [
+          'view_reports',
+          'update_reports',
+          'delete_reports',
+          'manage_admins',
+        ],
         'is_active': true,
       });
       print('Admin created: $email (uid: $uid)');

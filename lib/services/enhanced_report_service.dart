@@ -11,9 +11,10 @@ class EnhancedReportService {
   /// Quick connectivity check with timeout
   static Future<bool> _quickConnectivityCheck() async {
     try {
-      final dynamic connectivityResult = await Connectivity().checkConnectivity()
+      final dynamic connectivityResult = await Connectivity()
+          .checkConnectivity()
           .timeout(Duration(seconds: 2));
-      
+
       // Handle both single value and list of values
       if (connectivityResult is List) {
         final results = connectivityResult.cast<ConnectivityResult>();
@@ -37,11 +38,11 @@ class EnhancedReportService {
     List<String>? attachmentPaths,
   }) async {
     String caseId = _generateCaseId();
-    
+
     try {
       // Quick connectivity check (timeout after 2 seconds)
       bool isOnline = await _quickConnectivityCheck();
-      
+
       if (isOnline) {
         // Try to submit directly with shorter timeout
         try {
@@ -52,10 +53,10 @@ class EnhancedReportService {
             incidentDate: incidentDate,
             attachmentUrls: attachmentPaths,
           ).timeout(Duration(seconds: 10)); // 10 second timeout
-          
+
           // Sync pending reports in background (don't wait)
           _syncPendingReports();
-          
+
           return submittedCaseId;
         } catch (e) {
           // If direct submission fails, store offline
@@ -68,10 +69,10 @@ class EnhancedReportService {
             incidentDate: incidentDate,
             attachmentPaths: attachmentPaths,
           );
-          
+
           // Start background sync (don't wait)
           _syncPendingReports();
-          
+
           return caseId;
         }
       } else {
@@ -85,7 +86,7 @@ class EnhancedReportService {
           incidentDate: incidentDate,
           attachmentPaths: attachmentPaths,
         );
-        
+
         return caseId;
       }
     } catch (e) {
@@ -99,7 +100,7 @@ class EnhancedReportService {
         incidentDate: incidentDate,
         attachmentPaths: attachmentPaths,
       );
-      
+
       return caseId;
     }
   }
@@ -113,11 +114,11 @@ class EnhancedReportService {
     DateTime? incidentDate,
   }) async {
     String caseId = _generateCaseId();
-    
+
     try {
       // Quick connectivity check (timeout after 2 seconds)
       bool isOnline = await _quickConnectivityCheck();
-      
+
       if (isOnline) {
         // Try to submit directly with longer timeout for voice files
         try {
@@ -127,11 +128,13 @@ class EnhancedReportService {
             caseType: caseType,
             location: location,
             incidentDate: incidentDate,
-          ).timeout(Duration(seconds: 30)); // Increased timeout to 30 seconds for voice files
-          
+          ).timeout(
+            Duration(seconds: 30),
+          ); // Increased timeout to 30 seconds for voice files
+
           // Sync pending reports in background (don't wait)
           _syncPendingReports();
-          
+
           return submittedCaseId;
         } catch (e) {
           // If direct submission fails, store offline
@@ -144,10 +147,10 @@ class EnhancedReportService {
             location: location,
             incidentDate: incidentDate,
           );
-          
+
           // Start background sync (don't wait)
           _syncPendingReports();
-          
+
           return caseId;
         }
       } else {
@@ -161,7 +164,7 @@ class EnhancedReportService {
           location: location,
           incidentDate: incidentDate,
         );
-        
+
         return caseId;
       }
     } catch (e) {
@@ -175,7 +178,7 @@ class EnhancedReportService {
         location: location,
         incidentDate: incidentDate,
       );
-      
+
       return caseId;
     }
   }
@@ -188,8 +191,9 @@ class EnhancedReportService {
         return;
       }
 
-      List<Map<String, dynamic>> pendingReports = await OfflineStorageService.getPendingReports();
-      
+      List<Map<String, dynamic>> pendingReports =
+          await OfflineStorageService.getPendingReports();
+
       if (pendingReports.isEmpty) {
         print('No pending reports to sync');
         return;
@@ -201,7 +205,7 @@ class EnhancedReportService {
         try {
           String caseId = report['caseId'];
           int retryCount = report['retryCount'] ?? 0;
-          
+
           // Skip reports that have failed too many times
           if (retryCount > 5) {
             print('Skipping report $caseId - too many retries ($retryCount)');
@@ -209,37 +213,44 @@ class EnhancedReportService {
           }
 
           bool success = false;
-          
+
           if (report['type'] == 'text') {
             // Sync text report
             List<String>? attachments;
             if (report['attachmentPaths'] != null) {
               attachments = List<String>.from(report['attachmentPaths']);
             }
-            
+
             await ReportService.submitTextReport(
               reportText: report['reportText'] ?? '',
-              caseType: report['caseType'] ?? 'FGM', // Include caseType from offline storage
+              caseType:
+                  report['caseType'] ??
+                  'FGM', // Include caseType from offline storage
               location: report['location'],
-              incidentDate: report['incidentDate'] != null ? 
-                DateTime.parse(report['incidentDate']) : null,
+              incidentDate:
+                  report['incidentDate'] != null
+                      ? DateTime.parse(report['incidentDate'])
+                      : null,
               attachmentUrls: attachments,
             );
             success = true;
-            
           } else if (report['type'] == 'voice') {
             // Sync voice report
             String audioPath = report['audioFilePath'];
             File audioFile = File(audioPath);
-            
+
             if (await audioFile.exists()) {
               await ReportService.submitVoiceReport(
                 audioFile: audioFile,
                 additionalText: report['additionalText'],
-                caseType: report['caseType'] ?? 'FGM', // Include caseType from offline storage
+                caseType:
+                    report['caseType'] ??
+                    'FGM', // Include caseType from offline storage
                 location: report['location'],
-                incidentDate: report['incidentDate'] != null ? 
-                  DateTime.parse(report['incidentDate']) : null,
+                incidentDate:
+                    report['incidentDate'] != null
+                        ? DateTime.parse(report['incidentDate'])
+                        : null,
               );
               success = true;
             } else {
@@ -255,7 +266,6 @@ class EnhancedReportService {
             await OfflineStorageService.removePendingReport(caseId);
             print('Successfully synced report: $caseId');
           }
-
         } catch (e) {
           // Update retry count for failed sync
           String caseId = report['caseId'];
@@ -266,7 +276,6 @@ class EnhancedReportService {
 
       // Clean up old failed reports
       await OfflineStorageService.clearOldFailedReports();
-      
     } catch (e) {
       print('Error during sync: $e');
     }
@@ -276,26 +285,28 @@ class EnhancedReportService {
   static Future<void> startPeriodicSync() async {
     // Initial sync
     await _syncPendingReports();
-    
-    // Listen for connectivity changes  
+
+    // Listen for connectivity changes
     Connectivity().onConnectivityChanged.listen((dynamic result) {
       print('🔄 Connectivity changed: $result');
-      
+
       // Handle both single value and list of values
       bool isConnected = false;
       if (result is List) {
         final results = result.cast<ConnectivityResult>();
-        isConnected = results.any((r) => 
-          r == ConnectivityResult.mobile || 
-          r == ConnectivityResult.wifi ||
-          r == ConnectivityResult.ethernet
+        isConnected = results.any(
+          (r) =>
+              r == ConnectivityResult.mobile ||
+              r == ConnectivityResult.wifi ||
+              r == ConnectivityResult.ethernet,
         );
       } else {
-        isConnected = result == ConnectivityResult.mobile || 
-                     result == ConnectivityResult.wifi ||
-                     result == ConnectivityResult.ethernet;
+        isConnected =
+            result == ConnectivityResult.mobile ||
+            result == ConnectivityResult.wifi ||
+            result == ConnectivityResult.ethernet;
       }
-      
+
       if (isConnected) {
         print('✅ Network reconnected, starting sync...');
         _syncPendingReports();
@@ -328,11 +339,13 @@ class EnhancedReportService {
   static Future<bool> isOnline() async {
     return await OfflineStorageService.isOnline();
   }
+
   /// Get connectivity status string for UI
   static Future<String> getConnectivityStatus() async {
     try {
-      final dynamic connectivityResult = await Connectivity().checkConnectivity();
-      
+      final dynamic connectivityResult =
+          await Connectivity().checkConnectivity();
+
       // Handle both single value and list of values
       if (connectivityResult is List) {
         final results = connectivityResult.cast<ConnectivityResult>();
@@ -363,4 +376,3 @@ class EnhancedReportService {
     }
   }
 }
-

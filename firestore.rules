@@ -63,6 +63,16 @@ service cloud.firestore {
       allow update, delete: if isAdmin() || isAdminInCollection();
     }
     
+    // App usage analytics collection - for anonymous, aggregated usage metrics
+    match /app_usage_analytics/{document=**} {
+      // Allow authenticated admins to read analytics data
+      allow read: if isAdmin() || isAdminInCollection();
+      
+      // Allow write access for analytics collection
+      // In production, set this to false and use Cloud Functions for writes
+      allow write: if true; // TEMPORARY - change to false in production
+    }
+    
     // Deny all other access by default for security
     match /{document=**} {
       allow read, write: if false;

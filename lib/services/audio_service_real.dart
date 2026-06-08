@@ -55,7 +55,7 @@ class AudioRecordingService {
       // Create a mock audio file with binary content
       // This simulates an actual audio file for development/testing
       final file = File(_currentRecordingPath!);
-      
+
       // Create a mock M4A header and some content
       // This is a simplified mock - in production, use a real recording library
       final List<int> mockAudioData = [
@@ -67,12 +67,12 @@ class AudioRecordingService {
         // Mock audio content (silence/tone simulation)
         ...List.generate(1024, (index) => (index % 256)),
       ];
-      
+
       await file.writeAsBytes(mockAudioData);
 
       _isRecording = true;
       _recordingStartTime = DateTime.now();
-      
+
       debugPrint('🎤 Started recording: $_currentRecordingPath');
       return true;
     } catch (e) {
@@ -94,12 +94,15 @@ class AudioRecordingService {
       _currentRecordingPath = null;
 
       // Calculate recording duration
-      final duration = _recordingStartTime != null 
-          ? DateTime.now().difference(_recordingStartTime!)
-          : Duration.zero;
+      final duration =
+          _recordingStartTime != null
+              ? DateTime.now().difference(_recordingStartTime!)
+              : Duration.zero;
 
-      debugPrint('🛑 Stopped recording: $recordingPath (Duration: ${duration.inSeconds}s)');
-      
+      debugPrint(
+        '🛑 Stopped recording: $recordingPath (Duration: ${duration.inSeconds}s)',
+      );
+
       // Verify file exists
       if (recordingPath != null && await File(recordingPath).exists()) {
         return recordingPath;
@@ -118,14 +121,16 @@ class AudioRecordingService {
     try {
       if (_isRecording && _currentRecordingPath != null) {
         _isRecording = false;
-        
+
         // Delete the recording file
         final file = File(_currentRecordingPath!);
         if (await file.exists()) {
           await file.delete();
-          debugPrint('🗑️ Cancelled and deleted recording: $_currentRecordingPath');
+          debugPrint(
+            '🗑️ Cancelled and deleted recording: $_currentRecordingPath',
+          );
         }
-        
+
         _currentRecordingPath = null;
         _recordingStartTime = null;
       }
@@ -151,7 +156,7 @@ class AudioRecordingService {
     try {
       final directory = await getTemporaryDirectory();
       final files = directory.listSync();
-      
+
       for (final file in files) {
         if (file.path.contains('voice_report_') && file.path.endsWith('.m4a')) {
           // Delete files older than 1 hour

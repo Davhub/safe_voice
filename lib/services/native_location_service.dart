@@ -3,12 +3,14 @@ import 'package:flutter/services.dart';
 
 class NativeLocationService {
   static const MethodChannel _channel = MethodChannel('safe_voice/location');
-  
+
   /// Get current location with human-readable address
   static Future<String> getCurrentLocationAddress() async {
     try {
       // Try to get location with address from native platform
-      final result = await _channel.invokeMethod('getCurrentLocationWithAddress');
+      final result = await _channel.invokeMethod(
+        'getCurrentLocationWithAddress',
+      );
       if (result != null && result.isNotEmpty) {
         return result as String;
       }
@@ -26,7 +28,7 @@ class NativeLocationService {
       return 'Unable to detect location';
     }
   }
-  
+
   /// Request location permissions
   static Future<bool> requestLocationPermission() async {
     try {
@@ -37,7 +39,7 @@ class NativeLocationService {
       return false;
     }
   }
-  
+
   /// Check if location services are enabled
   static Future<bool> isLocationServiceEnabled() async {
     try {
@@ -48,7 +50,7 @@ class NativeLocationService {
       return false;
     }
   }
-  
+
   /// Open location settings
   static Future<void> openLocationSettings() async {
     try {

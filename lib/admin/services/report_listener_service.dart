@@ -47,9 +47,15 @@ class ReportListenerService {
   }
 
   /// Handle new report submission
-  static void _handleReportAdded(String reportId, Map<String, dynamic> reportData) {
+  static void _handleReportAdded(
+    String reportId,
+    Map<String, dynamic> reportData,
+  ) {
     // Create notification
-    AdminNotificationService.createReportSubmittedNotification(reportId, reportData);
+    AdminNotificationService.createReportSubmittedNotification(
+      reportId,
+      reportData,
+    );
 
     // Log activity
     AdminActivityService.logActivity(
@@ -66,17 +72,20 @@ class ReportListenerService {
   }
 
   /// Handle report status changes
-  static void _handleReportModified(String reportId, Map<String, dynamic> reportData) {
+  static void _handleReportModified(
+    String reportId,
+    Map<String, dynamic> reportData,
+  ) {
     final statusHistory = reportData['status_history'] as List<dynamic>?;
-    
+
     if (statusHistory != null && statusHistory.length >= 2) {
       // Get the last two status entries
       final currentStatus = statusHistory.last;
       final previousStatus = statusHistory[statusHistory.length - 2];
-      
+
       final oldStatus = previousStatus['status'] as String?;
       final newStatus = currentStatus['status'] as String?;
-      
+
       if (oldStatus != null && newStatus != null && oldStatus != newStatus) {
         // Status changed
         AdminNotificationService.createStatusChangeNotification(

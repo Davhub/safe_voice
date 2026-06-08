@@ -73,7 +73,7 @@ class AudioService {
       // Start recording
       await _recorder.start(config, path: _currentRecordingPath!);
       _isRecording = true;
-      
+
       print('✅ Real audio recording started: $_currentRecordingPath');
       return true;
     } catch (e) {
@@ -89,7 +89,7 @@ class AudioService {
       if (_isRecording) {
         final path = await _recorder.stop();
         _isRecording = false;
-        
+
         if (path != null && await File(path).exists()) {
           _currentRecordingPath = path;
           final file = File(path);
@@ -150,11 +150,11 @@ class AudioService {
       // Use audio player to get duration
       await _player.setSourceDeviceFile(filePath);
       final duration = await _player.getDuration();
-      
+
       if (duration != null) {
         return duration.inSeconds;
       }
-      
+
       return 0;
     } catch (e) {
       print('Error getting recording duration: $e');
@@ -220,7 +220,7 @@ class AudioService {
     try {
       File file = File(filePath);
       if (!await file.exists()) return '0 KB';
-      
+
       int bytes = await file.length();
       if (bytes < 1024) return '$bytes B';
       if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
@@ -248,7 +248,7 @@ class AudioService {
       if (_isRecording) {
         await _recorder.stop();
         _isRecording = false;
-        
+
         // Delete the file if it exists
         if (_currentRecordingPath != null) {
           File file = File(_currentRecordingPath!);
@@ -292,10 +292,12 @@ class AudioService {
     try {
       Directory appDir = await getApplicationDocumentsDirectory();
       List<FileSystemEntity> files = appDir.listSync();
-      
+
       int deletedCount = 0;
       for (var file in files) {
-        if (file is File && file.path.contains('voice_report_') && file.path.endsWith('.m4a')) {
+        if (file is File &&
+            file.path.contains('voice_report_') &&
+            file.path.endsWith('.m4a')) {
           // Delete files older than 7 days
           DateTime fileDate = await file.lastModified();
           DateTime now = DateTime.now();
@@ -305,7 +307,7 @@ class AudioService {
           }
         }
       }
-      
+
       if (deletedCount > 0) {
         print('🧹 Cleaned up $deletedCount old recordings');
       }

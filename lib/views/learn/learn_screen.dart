@@ -8,30 +8,38 @@ class LearnScreen extends StatelessWidget {
   const LearnScreen({Key? key, this.showBack = true}) : super(key: key);
 
   // This is our data model for the educational topics.
+  // Each topic has its own dedicated URL for easy maintenance
   final List<Map<String, dynamic>> educationalTopics = const [
     {
       'title': 'What is FGM?',
       'subtitle': 'Learn about FGM and its impact',
       'icon': Icons.book_outlined,
       'color': AppColors.secondary, // Purple
+      'url':
+          '${ApiRoute.webUrl}/female-genital-mutilation-key-facts-you-need-to-know/', // Dedicated URL for this topic
     },
     {
       'title': 'Why it is harmful',
       'subtitle': 'Health and psychological effects',
       'icon': Icons.favorite_outline,
       'color': AppColors.error, // Red
+      'url':
+          '${ApiRoute.webUrl}/why-fgm-is-harmful-understanding-the-risks-and-consequences/', // Dedicated URL for this topic
     },
     {
       'title': 'Laws & Rights',
       'subtitle': 'Legal protections and your rights',
       'icon': Icons.balance_outlined,
       'color': AppColors.info, // Blue
+      'url':
+          '${ApiRoute.webUrl}/understanding-the-law-human-rights-female-genital-mutilation-fgm-in-nigeria/', // Dedicated URL for this topic
     },
     {
-      'title': 'How to Get Help',
+      'title': 'Get Help',
       'subtitle': 'Support resources and contacts',
       'icon': Icons.help_outline,
       'color': AppColors.success, // Green
+      'url': '${ApiRoute.webUrl}/contact/', // Dedicated URL for this topic
     },
   ];
 
@@ -41,7 +49,7 @@ class LearnScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Education Hub',
+          'Learn About FGM',
           style: TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
@@ -49,14 +57,18 @@ class LearnScreen extends StatelessWidget {
         ),
         backgroundColor: AppColors.background,
         elevation: 0,
-        leading: showBack
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-              )
-            : null,
+        leading:
+            showBack
+                ? IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back_ios,
+                    color: AppColors.textPrimary,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                )
+                : null,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -78,10 +90,7 @@ class LearnScreen extends StatelessWidget {
               ),
               child: const Text(
                 'Learn about FGM, its impacts, and how to help prevent it. Knowledge is power.',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.textPrimary,
-                ),
+                style: TextStyle(fontSize: 16, color: AppColors.textPrimary),
                 textAlign: TextAlign.left,
               ),
             ),
@@ -89,40 +98,49 @@ class LearnScreen extends StatelessWidget {
             // Dynamically generated list of topic cards
             ListView.builder(
               shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(), // Allows the outer SingleChildScrollView to handle scrolling
+              physics:
+                  const NeverScrollableScrollPhysics(), // Allows the outer SingleChildScrollView to handle scrolling
               itemCount: educationalTopics.length,
               itemBuilder: (context, index) {
                 final topic = educationalTopics[index];
-                return GestureDetector(
-                  onTap: ()async{
-                    final Uri url = Uri.parse(
-                                      "${ApiRoute.webUrl}/about-us");
+                return _EducationCard(
+                  title: topic['title'],
+                  subtitle: topic['subtitle'],
+                  icon: topic['icon'],
+                  iconColor: topic['color'],
+                  onTap: () async {
+                    // Launch the dedicated URL for this topic
+                    final Uri url = Uri.parse(topic['url']);
 
-                                  if (await canLaunchUrl(url)) {
-                                    await launchUrl(url, 
-                                        mode: LaunchMode.externalApplication);
-                                  } else {
-                                    throw "Could not launch $url";
-                                  }
+                    try {
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(
+                          url,
+                          mode: LaunchMode.externalApplication,
+                        );
+                      } else {
+                        // Show error message if URL cannot be launched
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Could not open ${topic['title']}'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      // Handle any errors during URL launch
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error opening link: $e'),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                      }
+                    }
                   },
-                  child: _EducationCard(
-                    title: topic['title'],
-                    subtitle: topic['subtitle'],
-                    icon: topic['icon'],
-                    iconColor: topic['color'],
-                    onTap: () async {
-                      // TODO: Navigate to a detailed screen for this topic
-                      final Uri url = Uri.parse(
-                                      "${ApiRoute.webUrl}/about-us");
-
-                                  if (await canLaunchUrl(url)) {
-                                    await launchUrl(url, 
-                                        mode: LaunchMode.externalApplication);
-                                  } else {
-                                    throw "Could not launch $url";
-                                  }
-                    },
-                  ),
                 );
               },
             ),
@@ -170,11 +188,7 @@ class _EducationCard extends StatelessWidget {
                     color: iconColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 28,
-                    color: iconColor,
-                  ),
+                  child: Icon(icon, size: 28, color: iconColor),
                 ),
                 const SizedBox(width: 20),
                 Expanded(

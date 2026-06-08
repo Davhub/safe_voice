@@ -14,11 +14,15 @@ class SecureReportService {
       WriteBatch batch = _firestore.batch();
 
       // Store full report in main collection (admin only access)
-      DocumentReference reportRef = _firestore.collection('reports').doc(caseId);
+      DocumentReference reportRef = _firestore
+          .collection('reports')
+          .doc(caseId);
       batch.set(reportRef, reportData);
 
       // Store only status info in public status collection
-      DocumentReference statusRef = _firestore.collection('report_status').doc(caseId);
+      DocumentReference statusRef = _firestore
+          .collection('report_status')
+          .doc(caseId);
       batch.set(statusRef, {
         'caseId': caseId,
         'status': 'submitted',
@@ -29,7 +33,7 @@ class SecureReportService {
 
       // Execute batch
       await batch.commit();
-      
+
       return caseId;
     } catch (e) {
       throw Exception('Failed to submit secure report: $e');
@@ -37,13 +41,13 @@ class SecureReportService {
   }
 
   /// Get status from public status collection
-  static Future<Map<String, dynamic>?> getSecureReportStatus(String caseId) async {
+  static Future<Map<String, dynamic>?> getSecureReportStatus(
+    String caseId,
+  ) async {
     try {
-      DocumentSnapshot doc = await _firestore
-          .collection('report_status')
-          .doc(caseId)
-          .get();
-      
+      DocumentSnapshot doc =
+          await _firestore.collection('report_status').doc(caseId).get();
+
       if (doc.exists) {
         return doc.data() as Map<String, dynamic>;
       }

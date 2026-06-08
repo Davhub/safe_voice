@@ -8,20 +8,14 @@ class FirestoreInitService {
   static Future<void> initializeAdminCollections() async {
     try {
       // Check if collections exist by trying to get one document
-      final notificationsSnapshot = await _firestore
-          .collection('admin_notifications')
-          .limit(1)
-          .get();
-      
-      final messagesSnapshot = await _firestore
-          .collection('admin_messages')
-          .limit(1)
-          .get();
-      
-      final activitiesSnapshot = await _firestore
-          .collection('admin_activities')
-          .limit(1)
-          .get();
+      final notificationsSnapshot =
+          await _firestore.collection('admin_notifications').limit(1).get();
+
+      final messagesSnapshot =
+          await _firestore.collection('admin_messages').limit(1).get();
+
+      final activitiesSnapshot =
+          await _firestore.collection('admin_activities').limit(1).get();
 
       // Create sample notification if collection is empty
       if (notificationsSnapshot.docs.isEmpty) {
@@ -48,7 +42,8 @@ class FirestoreInitService {
     await _firestore.collection('admin_notifications').add({
       'type': 'system',
       'title': 'Welcome to SafeVoice Admin',
-      'message': 'Your admin dashboard is ready. Notifications will appear here when reports are submitted.',
+      'message':
+          'Your admin dashboard is ready. Notifications will appear here when reports are submitted.',
       'priority': 'normal',
       'isRead': false,
       'createdAt': FieldValue.serverTimestamp(),
@@ -59,7 +54,8 @@ class FirestoreInitService {
   static Future<void> _createSampleMessage() async {
     await _firestore.collection('admin_messages').add({
       'subject': 'Welcome to SafeVoice Admin',
-      'content': 'Welcome to the SafeVoice admin messaging system. Messages and communications will appear here.',
+      'content':
+          'Welcome to the SafeVoice admin messaging system. Messages and communications will appear here.',
       'senderId': 'system',
       'priority': 'normal',
       'isRead': false,
@@ -82,7 +78,8 @@ class FirestoreInitService {
   static Future<void> clearAllAdminData() async {
     try {
       // Clear notifications
-      final notifications = await _firestore.collection('admin_notifications').get();
+      final notifications =
+          await _firestore.collection('admin_notifications').get();
       for (var doc in notifications.docs) {
         await doc.reference.delete();
       }

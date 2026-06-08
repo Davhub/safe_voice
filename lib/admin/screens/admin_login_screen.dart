@@ -9,14 +9,15 @@ class AdminLoginScreen extends StatefulWidget {
   State<AdminLoginScreen> createState() => _AdminLoginScreenState();
 }
 
-class _AdminLoginScreenState extends State<AdminLoginScreen> with TickerProviderStateMixin {
+class _AdminLoginScreenState extends State<AdminLoginScreen>
+    with TickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
   bool _obscurePassword = true;
   String? _errorMessage;
-  
+
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -28,23 +29,18 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with TickerProvider
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-    
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
-    
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
+
     _animationController.forward();
   }
 
@@ -110,7 +106,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with TickerProvider
                             const SizedBox(height: 24),
                             Text(
                               'Admin Portal',
-                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              style: Theme.of(
+                                context,
+                              ).textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.grey[800],
                               ),
@@ -118,12 +116,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with TickerProvider
                             const SizedBox(height: 8),
                             Text(
                               'Safe Voice Administration',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[600],
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: Colors.grey[600]),
                             ),
                             const SizedBox(height: 32),
-                            
+
                             // Error message
                             if (_errorMessage != null) ...[
                               Container(
@@ -131,16 +128,24 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with TickerProvider
                                 decoration: BoxDecoration(
                                   color: Colors.red.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                                  border: Border.all(
+                                    color: Colors.red.withOpacity(0.3),
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.error_outline, color: Colors.red[700], size: 20),
+                                    Icon(
+                                      Icons.error_outline,
+                                      color: Colors.red[700],
+                                      size: 20,
+                                    ),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
                                         _errorMessage!,
-                                        style: TextStyle(color: Colors.red[700]),
+                                        style: TextStyle(
+                                          color: Colors.red[700],
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -148,61 +153,84 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with TickerProvider
                               ),
                               const SizedBox(height: 16),
                             ],
-                            
+
                             // Email field
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
                               decoration: InputDecoration(
                                 labelText: 'Email Address',
-                                prefixIcon: Icon(Icons.email_outlined, color: AppColors.primary),
+                                prefixIcon: Icon(
+                                  Icons.email_outlined,
+                                  color: AppColors.primary,
+                                ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: AppColors.primary, width: 2),
+                                  borderSide: BorderSide(
+                                    color: AppColors.primary,
+                                    width: 2,
+                                  ),
                                 ),
                               ),
                               validator: (value) {
-                                if (value?.isEmpty ?? true) return 'Please enter your email';
-                                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)) {
+                                if (value?.isEmpty ?? true)
+                                  return 'Please enter your email';
+                                if (!RegExp(
+                                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                ).hasMatch(value!)) {
                                   return 'Please enter a valid email';
                                 }
                                 return null;
                               },
                             ),
                             const SizedBox(height: 16),
-                            
+
                             // Password field
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
                               decoration: InputDecoration(
                                 labelText: 'Password',
-                                prefixIcon: Icon(Icons.lock_outlined, color: AppColors.primary),
+                                prefixIcon: Icon(
+                                  Icons.lock_outlined,
+                                  color: AppColors.primary,
+                                ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
-                                    _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                    _obscurePassword
+                                        ? Icons.visibility_outlined
+                                        : Icons.visibility_off_outlined,
                                     color: Colors.grey[600],
                                   ),
-                                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                  onPressed:
+                                      () => setState(
+                                        () =>
+                                            _obscurePassword =
+                                                !_obscurePassword,
+                                      ),
                                 ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: AppColors.primary, width: 2),
+                                  borderSide: BorderSide(
+                                    color: AppColors.primary,
+                                    width: 2,
+                                  ),
                                 ),
                               ),
                               validator: (value) {
-                                if (value?.isEmpty ?? true) return 'Please enter your password';
+                                if (value?.isEmpty ?? true)
+                                  return 'Please enter your password';
                                 return null;
                               },
                             ),
                             const SizedBox(height: 24),
-                            
+
                             // Login button
                             SizedBox(
                               width: double.infinity,
@@ -217,26 +245,30 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with TickerProvider
                                   ),
                                   elevation: 2,
                                 ),
-                                child: _loading
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                child:
+                                    _loading
+                                        ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
+                                          ),
+                                        )
+                                        : const Text(
+                                          'Sign In',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
-                                      )
-                                    : const Text(
-                                        'Sign In',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
                               ),
                             ),
                             const SizedBox(height: 16),
-                            
+
                             // Quick access hint
                             Container(
                               padding: const EdgeInsets.all(12),
@@ -247,7 +279,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with TickerProvider
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.info_outline, color: Colors.blue[700], size: 16),
+                                  Icon(
+                                    Icons.info_outline,
+                                    color: Colors.blue[700],
+                                    size: 16,
+                                  ),
                                   const SizedBox(width: 8),
                                   Text(
                                     'Demo: admin@safevoice.com / admin123',
@@ -275,18 +311,18 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with TickerProvider
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
-    
+
     try {
       String? error = await AdminAuthService.adminLogin(
         _emailController.text.trim(),
         _passwordController.text,
       );
-      
+
       if (error != null) {
         setState(() {
           _errorMessage = error;

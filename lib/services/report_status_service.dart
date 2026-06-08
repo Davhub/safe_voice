@@ -12,15 +12,17 @@ class ReportStatusService {
     try {
       // Sanitize case ID
       String cleanCaseId = caseId.trim().toUpperCase();
-      
+
       print('🔍 Checking status for case ID: $cleanCaseId');
-      
+
       // Check connectivity first
       bool isOnline = await _isOnline();
       if (!isOnline) {
-        throw Exception('No internet connection. Please check your network and try again.');
+        throw Exception(
+          'No internet connection. Please check your network and try again.',
+        );
       }
-      
+
       // Query Firestore with timeout
       DocumentSnapshot doc = await _firestore
           .collection('reports')
@@ -28,15 +30,19 @@ class ReportStatusService {
           .get()
           .timeout(
             Duration(seconds: 15),
-            onTimeout: () => throw TimeoutException('Request timed out. Please try again.'),
+            onTimeout:
+                () =>
+                    throw TimeoutException(
+                      'Request timed out. Please try again.',
+                    ),
           );
-      
+
       print('📄 Document exists: ${doc.exists}');
-      
+
       if (doc.exists) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         print('📊 Document data: $data');
-        
+
         // Ensure we have the required fields
         Map<String, dynamic> statusInfo = {
           'caseId': data['caseId'] ?? cleanCaseId,
@@ -45,7 +51,7 @@ class ReportStatusService {
           'type': data['type'] ?? 'unknown',
           'lastUpdated': data['lastUpdated'] ?? data['submittedAt'],
         };
-        
+
         // Add optional fields if available
         if (data['statusMessage'] != null) {
           statusInfo['statusMessage'] = data['statusMessage'];
@@ -53,7 +59,7 @@ class ReportStatusService {
         if (data['estimatedResolution'] != null) {
           statusInfo['estimatedResolution'] = data['estimatedResolution'];
         }
-        
+
         print('✅ Status retrieved successfully: ${statusInfo['status']}');
         return statusInfo;
       } else {
@@ -64,11 +70,11 @@ class ReportStatusService {
             .limit(1)
             .get()
             .timeout(Duration(seconds: 10));
-        
+
         if (querySnapshot.docs.isNotEmpty) {
           DocumentSnapshot doc = querySnapshot.docs.first;
           Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-          
+
           Map<String, dynamic> statusInfo = {
             'caseId': data['caseId'] ?? cleanCaseId,
             'status': data['status'] ?? 'submitted',
@@ -76,27 +82,34 @@ class ReportStatusService {
             'type': data['type'] ?? 'unknown',
             'lastUpdated': data['lastUpdated'] ?? data['submittedAt'],
           };
-          
+
           print('✅ Status found via query: ${statusInfo['status']}');
           return statusInfo;
         }
-        
+
         print('❌ Case ID not found in database');
         return null;
       }
     } on TimeoutException catch (e) {
       print('⏰ Timeout error: $e');
-      throw Exception('Request timed out. Please check your internet connection and try again.');
+      throw Exception(
+        'Request timed out. Please check your internet connection and try again.',
+      );
     } catch (e) {
       print('❌ Error getting report status: $e');
-      
+
       // Provide more specific error messages
-      if (e.toString().contains('network') || e.toString().contains('connection')) {
-        throw Exception('Network error. Please check your internet connection and try again.');
+      if (e.toString().contains('network') ||
+          e.toString().contains('connection')) {
+        throw Exception(
+          'Network error. Please check your internet connection and try again.',
+        );
       } else if (e.toString().contains('permission')) {
         throw Exception('Access denied. Please try again later.');
       } else {
-        throw Exception('Unable to check status at this time. Please try again later.');
+        throw Exception(
+          'Unable to check status at this time. Please try again later.',
+        );
       }
     }
   }
@@ -109,12 +122,12 @@ class ReportStatusService {
   ) {
     try {
       String cleanCaseId = caseId.trim().toUpperCase();
-      
+
       // Cancel any existing listener for this case ID
       _statusListeners[cleanCaseId]?.cancel();
-      
+
       print('👂 Starting real-time listener for: $cleanCaseId');
-      
+
       StreamSubscription<DocumentSnapshot> subscription = _firestore
           .collection('reports')
           .doc(cleanCaseId)
@@ -123,8 +136,9 @@ class ReportStatusService {
             (DocumentSnapshot doc) {
               try {
                 if (doc.exists) {
-                  Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-                  
+                  Map<String, dynamic> data =
+                      doc.data() as Map<String, dynamic>;
+
                   Map<String, dynamic> statusInfo = {
                     'caseId': data['caseId'] ?? cleanCaseId,
                     'status': data['status'] ?? 'submitted',
@@ -132,15 +146,16 @@ class ReportStatusService {
                     'type': data['type'] ?? 'unknown',
                     'lastUpdated': data['lastUpdated'] ?? data['submittedAt'],
                   };
-                  
+
                   // Add optional fields
                   if (data['statusMessage'] != null) {
                     statusInfo['statusMessage'] = data['statusMessage'];
                   }
                   if (data['estimatedResolution'] != null) {
-                    statusInfo['estimatedResolution'] = data['estimatedResolution'];
+                    statusInfo['estimatedResolution'] =
+                        data['estimatedResolution'];
                   }
-                  
+
                   print('🔄 Status update received: ${statusInfo['status']}');
                   onStatusUpdate(statusInfo);
                 } else {
@@ -157,7 +172,7 @@ class ReportStatusService {
               onError('Connection error. Status updates paused.');
             },
           );
-      
+
       _statusListeners[cleanCaseId] = subscription;
       return subscription;
     } catch (e) {
@@ -234,8 +249,9 @@ class ReportStatusService {
   /// Check if device is online
   static Future<bool> _isOnline() async {
     try {
-      final dynamic connectivityResult = await Connectivity().checkConnectivity();
-      
+      final dynamic connectivityResult =
+          await Connectivity().checkConnectivity();
+
       // Handle both single value and list of values
       if (connectivityResult is List) {
         final results = connectivityResult.cast<ConnectivityResult>();

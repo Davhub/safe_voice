@@ -18,10 +18,10 @@ class OfflineStorageService {
   /// Initialize the database with proper schema
   static Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'safe_voice_offline.db');
-    
+
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (Database db, int version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -41,6 +41,14 @@ class OfflineStorageService {
           )
         ''');
       },
+      onUpgrade: (Database db, int oldVersion, int newVersion) async {
+        // Migration from version 1 to 2: Add caseType column
+        if (oldVersion < 2) {
+          await db.execute('''
+            ALTER TABLE $_tableName ADD COLUMN caseType TEXT DEFAULT 'FGM'
+          ''');
+        }
+      },
     );
   }
 
@@ -54,7 +62,7 @@ class OfflineStorageService {
     List<String>? attachmentPaths,
   }) async {
     final db = await database;
-    
+
     Map<String, dynamic> report = {
       'caseId': caseId,
       'type': 'text',
@@ -62,7 +70,8 @@ class OfflineStorageService {
       'reportText': reportText,
       'location': location,
       'incidentDate': incidentDate?.toIso8601String(),
-      'attachmentPaths': attachmentPaths != null ? jsonEncode(attachmentPaths) : null,
+      'attachmentPaths':
+          attachmentPaths != null ? jsonEncode(attachmentPaths) : null,
       'createdAt': DateTime.now().toIso8601String(),
     };
 
@@ -80,7 +89,7 @@ class OfflineStorageService {
     DateTime? incidentDate,
   }) async {
     final db = await database;
-    
+
     Map<String, dynamic> report = {
       'caseId': caseId,
       'type': 'voice',
@@ -109,48 +118,50 @@ class OfflineStorageService {
   }
 
   /// Update retry count and error message for a failed report
-  static Future<void> updateRetryCount(String caseId, String errorMessage) async {
+  static Future<void> updateRetryCount(
+    String caseId,
+    String errorMessage,
+  ) async {
     final db = await database;
-    
+
     // Get current retry count
     List<Map<String, dynamic>> reports = await db.query(
-      _tableName, 
-      where: 'caseId = ?', 
-      whereArgs: [caseId]
+      _tableName,
+      where: 'caseId = ?',
+      whereArgs: [caseId],
     );
-    
+
     if (reports.isNotEmpty) {
       int currentRetryCount = reports[0]['retryCount'] ?? 0;
       await db.update(
         _tableName,
-        {
-          'retryCount': currentRetryCount + 1,
-          'lastErrorMessage': errorMessage,
-        },
+        {'retryCount': currentRetryCount + 1, 'lastErrorMessage': errorMessage},
         where: 'caseId = ?',
         whereArgs: [caseId],
       );
     }
   }
 
-  /// Check if device is online  
+  /// Check if device is online
   static Future<bool> isOnline() async {
     try {
-      final dynamic connectivityResult = await Connectivity().checkConnectivity();
-      
+      final dynamic connectivityResult =
+          await Connectivity().checkConnectivity();
+
       // Handle both single value and list of values
       if (connectivityResult is List) {
         final results = connectivityResult.cast<ConnectivityResult>();
-        return results.any((r) => 
-          r == ConnectivityResult.mobile || 
-          r == ConnectivityResult.wifi ||
-          r == ConnectivityResult.ethernet
+        return results.any(
+          (r) =>
+              r == ConnectivityResult.mobile ||
+              r == ConnectivityResult.wifi ||
+              r == ConnectivityResult.ethernet,
         );
       } else {
         // Legacy single value support
-        return connectivityResult == ConnectivityResult.mobile || 
-               connectivityResult == ConnectivityResult.wifi ||
-               connectivityResult == ConnectivityResult.ethernet;
+        return connectivityResult == ConnectivityResult.mobile ||
+            connectivityResult == ConnectivityResult.wifi ||
+            connectivityResult == ConnectivityResult.ethernet;
       }
     } catch (e) {
       print('❌ Connectivity check error: $e');
@@ -169,8 +180,9 @@ class OfflineStorageService {
   /// Clear old failed reports (older than 7 days with retry count > 5)
   static Future<void> clearOldFailedReports() async {
     final db = await database;
-    String sevenDaysAgo = DateTime.now().subtract(Duration(days: 7)).toIso8601String();
-    
+    String sevenDaysAgo =
+        DateTime.now().subtract(Duration(days: 7)).toIso8601String();
+
     await db.delete(
       _tableName,
       where: 'createdAt < ? AND retryCount > 5',
@@ -181,14 +193,20 @@ class OfflineStorageService {
   /// Get storage statistics
   static Future<Map<String, int>> getStorageStats() async {
     final db = await database;
-    
+
     // Count by type
-    var textCount = await db.rawQuery('SELECT COUNT(*) as count FROM $_tableName WHERE type = "text"');
-    var voiceCount = await db.rawQuery('SELECT COUNT(*) as count FROM $_tableName WHERE type = "voice"');
-    
+    var textCount = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM $_tableName WHERE type = "text"',
+    );
+    var voiceCount = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM $_tableName WHERE type = "voice"',
+    );
+
     // Count by retry status
-    var failedCount = await db.rawQuery('SELECT COUNT(*) as count FROM $_tableName WHERE retryCount > 3');
-    
+    var failedCount = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM $_tableName WHERE retryCount > 3',
+    );
+
     return {
       'total': await getPendingReportsCount(),
       'text': Sqflite.firstIntValue(textCount) ?? 0,

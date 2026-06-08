@@ -20,7 +20,9 @@ class TestSafeVoiceAdminApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: AppColors.primary,
-        colorScheme: ColorScheme.fromSwatch().copyWith(primary: AppColors.primary),
+        colorScheme: ColorScheme.fromSwatch().copyWith(
+          primary: AppColors.primary,
+        ),
       ),
       home: const TestAdminScreen(),
     );
@@ -48,10 +50,7 @@ class TestAdminScreen extends StatelessWidget {
             SizedBox(height: 20),
             Text('If you see this, the basic app structure works!'),
             SizedBox(height: 40),
-            Text(
-              'Next: Test login screen',
-              style: TextStyle(fontSize: 16),
-            ),
+            Text('Next: Test login screen', style: TextStyle(fontSize: 16)),
           ],
         ),
       ),

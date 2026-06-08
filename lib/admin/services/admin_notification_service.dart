@@ -24,16 +24,21 @@ class AdminNotificationService {
   }
 
   /// Create notification when report is submitted
-  static Future<void> createReportSubmittedNotification(String reportId, Map<String, dynamic> reportData) async {
+  static Future<void> createReportSubmittedNotification(
+    String reportId,
+    Map<String, dynamic> reportData,
+  ) async {
     try {
-      final now = Timestamp.now();  // Use Timestamp.now() for immediate consistency
-      
+      final now =
+          Timestamp.now(); // Use Timestamp.now() for immediate consistency
+
       // Create more specific notification title based on report type
       final reportType = reportData['type'] ?? 'report';
-      final title = reportType == 'voice' 
-          ? 'New Voice Report Submitted' 
-          : 'New Text Report Submitted';
-      
+      final title =
+          reportType == 'voice'
+              ? 'New Voice Report Submitted'
+              : 'New Text Report Submitted';
+
       await _firestore.collection('admin_notifications').add({
         'type': 'report_submitted',
         'title': title,
@@ -48,7 +53,7 @@ class AdminNotificationService {
           'status': reportData['status'],
         },
       });
-      
+
       print('✅ Notification created: $title');
     } catch (e) {
       print('❌ Error creating notification: $e');
@@ -62,22 +67,21 @@ class AdminNotificationService {
     String newStatus,
   ) async {
     try {
-      final now = Timestamp.now();  // Use Timestamp.now() for immediate consistency
-      
+      final now =
+          Timestamp.now(); // Use Timestamp.now() for immediate consistency
+
       await _firestore.collection('admin_notifications').add({
         'type': 'status_change',
         'title': 'Report Status Updated',
-        'message': 'Report #${reportId.substring(0, 8)} changed from $oldStatus to $newStatus',
+        'message':
+            'Report #${reportId.substring(0, 8)} changed from $oldStatus to $newStatus',
         'reportId': reportId,
         'priority': 'normal',
         'isRead': false,
         'createdAt': now,
-        'data': {
-          'oldStatus': oldStatus,
-          'newStatus': newStatus,
-        },
+        'data': {'oldStatus': oldStatus, 'newStatus': newStatus},
       });
-      
+
       print('✅ Status change notification created');
     } catch (e) {
       print('❌ Error creating notification: $e');
@@ -85,10 +89,14 @@ class AdminNotificationService {
   }
 
   /// Create notification for high priority reports
-  static Future<void> createHighPriorityNotification(String reportId, String reason) async {
+  static Future<void> createHighPriorityNotification(
+    String reportId,
+    String reason,
+  ) async {
     try {
-      final now = Timestamp.now();  // Use Timestamp.now() for immediate consistency
-      
+      final now =
+          Timestamp.now(); // Use Timestamp.now() for immediate consistency
+
       await _firestore.collection('admin_notifications').add({
         'type': 'high_priority',
         'title': 'High Priority Alert',
@@ -106,10 +114,10 @@ class AdminNotificationService {
   /// Mark notification as read
   static Future<void> markAsRead(String notificationId) async {
     try {
-      await _firestore.collection('admin_notifications').doc(notificationId).update({
-        'isRead': true,
-        'readAt': FieldValue.serverTimestamp(),
-      });
+      await _firestore
+          .collection('admin_notifications')
+          .doc(notificationId)
+          .update({'isRead': true, 'readAt': FieldValue.serverTimestamp()});
     } catch (e) {
       print('Error marking notification as read: $e');
     }
@@ -118,10 +126,11 @@ class AdminNotificationService {
   /// Mark all notifications as read
   static Future<void> markAllAsRead() async {
     try {
-      final unreadNotifications = await _firestore
-          .collection('admin_notifications')
-          .where('isRead', isEqualTo: false)
-          .get();
+      final unreadNotifications =
+          await _firestore
+              .collection('admin_notifications')
+              .where('isRead', isEqualTo: false)
+              .get();
 
       final batch = _firestore.batch();
       for (var doc in unreadNotifications.docs) {
@@ -139,7 +148,10 @@ class AdminNotificationService {
   /// Delete notification
   static Future<void> deleteNotification(String notificationId) async {
     try {
-      await _firestore.collection('admin_notifications').doc(notificationId).delete();
+      await _firestore
+          .collection('admin_notifications')
+          .doc(notificationId)
+          .delete();
     } catch (e) {
       print('Error deleting notification: $e');
     }
@@ -148,10 +160,11 @@ class AdminNotificationService {
   /// Delete all read notifications
   static Future<void> clearReadNotifications() async {
     try {
-      final readNotifications = await _firestore
-          .collection('admin_notifications')
-          .where('isRead', isEqualTo: true)
-          .get();
+      final readNotifications =
+          await _firestore
+              .collection('admin_notifications')
+              .where('isRead', isEqualTo: true)
+              .get();
 
       final batch = _firestore.batch();
       for (var doc in readNotifications.docs) {
@@ -167,27 +180,47 @@ class AdminNotificationService {
   static String _determinePriority(Map<String, dynamic> reportData) {
     final content = (reportData['content'] ?? '').toString().toLowerCase();
     final keywords = reportData['keywords'] as List<dynamic>? ?? [];
-    
-    final urgentKeywords = ['emergency', 'urgent', 'danger', 'help', 'attack', 'violence', 'assault', 'weapon'];
-    final highKeywords = ['threat', 'harassment', 'unsafe', 'concern', 'suspicious', 'bullying'];
-    
-    if (keywords.any((k) => urgentKeywords.contains(k.toString().toLowerCase())) ||
+
+    final urgentKeywords = [
+      'emergency',
+      'urgent',
+      'danger',
+      'help',
+      'attack',
+      'violence',
+      'assault',
+      'weapon',
+    ];
+    final highKeywords = [
+      'threat',
+      'harassment',
+      'unsafe',
+      'concern',
+      'suspicious',
+      'bullying',
+    ];
+
+    if (keywords.any(
+          (k) => urgentKeywords.contains(k.toString().toLowerCase()),
+        ) ||
         urgentKeywords.any((k) => content.contains(k))) {
       return 'urgent';
     }
-    
-    if (keywords.any((k) => highKeywords.contains(k.toString().toLowerCase())) ||
+
+    if (keywords.any(
+          (k) => highKeywords.contains(k.toString().toLowerCase()),
+        ) ||
         highKeywords.any((k) => content.contains(k))) {
       return 'high';
     }
-    
+
     return 'normal';
   }
 
   /// Format timestamp with accurate relative time
   static String formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return 'Unknown';
-    
+
     try {
       final dateTime = timestamp.toDate();
       final now = DateTime.now();
@@ -196,22 +229,22 @@ class AdminNotificationService {
       // For very recent times
       if (difference.inSeconds < 60) {
         return 'Just now';
-      } 
+      }
       // For times within the last hour
       else if (difference.inMinutes < 60) {
         final mins = difference.inMinutes;
         return '$mins ${mins == 1 ? 'minute' : 'minutes'} ago';
-      } 
+      }
       // For times within the last 24 hours
       else if (difference.inHours < 24) {
         final hours = difference.inHours;
         return '$hours ${hours == 1 ? 'hour' : 'hours'} ago';
-      } 
+      }
       // For times within the last week
       else if (difference.inDays < 7) {
         final days = difference.inDays;
         return '$days ${days == 1 ? 'day' : 'days'} ago';
-      } 
+      }
       // For times within the last month
       else if (difference.inDays < 30) {
         final weeks = (difference.inDays / 7).floor();

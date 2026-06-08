@@ -30,7 +30,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
 
   Future<void> _checkStatus() async {
     String caseId = _caseIdController.text.trim();
-    
+
     if (caseId.isEmpty) {
       setState(() {
         _errorMessage = 'Please enter a case ID';
@@ -42,7 +42,8 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
     // Validate case ID format
     if (!ReportStatusService.isValidCaseId(caseId)) {
       setState(() {
-        _errorMessage = 'Invalid case ID format. Case IDs should be in format: SV12345678';
+        _errorMessage =
+            'Invalid case ID format. Case IDs should be in format: SV12345678';
         _reportStatus = null;
       });
       return;
@@ -61,7 +62,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
     try {
       // Get initial status
       final status = await ReportStatusService.getReportStatus(caseId);
-      
+
       setState(() {
         if (status != null) {
           _reportStatus = status;
@@ -69,7 +70,8 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
           _setupRealTimeUpdates(caseId);
         } else {
           _reportStatus = null;
-          _errorMessage = 'Case ID not found. Please check your case ID and try again.';
+          _errorMessage =
+              'Case ID not found. Please check your case ID and try again.';
         }
       });
     } catch (e) {
@@ -97,12 +99,14 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
           setState(() {
             _reportStatus = updatedStatus;
           });
-          
+
           // Show a subtle notification for status updates
           if (_reportStatus != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Status updated: ${_getStatusDisplayName(updatedStatus['status'])}'),
+                content: Text(
+                  'Status updated: ${_getStatusDisplayName(updatedStatus['status'])}',
+                ),
                 duration: Duration(seconds: 2),
                 backgroundColor: AppColors.success,
               ),
@@ -115,7 +119,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
           setState(() {
             _isListeningForUpdates = false;
           });
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Real-time updates paused: $error'),
@@ -144,10 +148,10 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
       );
 
       String testCaseId = await TestReportService.createTestReport();
-      
+
       // Auto-fill the case ID field
       _caseIdController.text = testCaseId;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Test report created: $testCaseId'),
@@ -188,7 +192,6 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -211,15 +214,12 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
               ),
               child: const Text(
                 'Enter your case ID to check the status of your anonymous report. Your case ID was provided when you submitted your report.',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.textPrimary,
-                ),
+                style: TextStyle(fontSize: 16, color: AppColors.textPrimary),
                 textAlign: TextAlign.center,
               ),
             ),
             const SizedBox(height: 32),
-            
+
             // Case ID Input
             const Text(
               'Case ID',
@@ -241,12 +241,15 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
                 ),
-                prefixIcon: const Icon(Icons.receipt_long, color: AppColors.textSecondary),
+                prefixIcon: const Icon(
+                  Icons.receipt_long,
+                  color: AppColors.textSecondary,
+                ),
               ),
               textCapitalization: TextCapitalization.characters,
             ),
             const SizedBox(height: 24),
-            
+
             // Check Status Button
             SizedBox(
               width: double.infinity,
@@ -259,27 +262,28 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: AppColors.textOnPrimary,
-                          strokeWidth: 2,
+                child:
+                    _isLoading
+                        ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: AppColors.textOnPrimary,
+                            strokeWidth: 2,
+                          ),
+                        )
+                        : const Text(
+                          'Check Status',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textOnPrimary,
+                          ),
                         ),
-                      )
-                    : const Text(
-                        'Check Status',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textOnPrimary,
-                        ),
-                      ),
               ),
             ),
             const SizedBox(height: 32),
-            
+
             // Error Message
             if (_errorMessage != null)
               Container(
@@ -306,7 +310,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                   ],
                 ),
               ),
-            
+
             // Status Display
             if (_reportStatus != null)
               Container(
@@ -328,7 +332,10 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.check_circle_outline, color: AppColors.success),
+                        const Icon(
+                          Icons.check_circle_outline,
+                          color: AppColors.success,
+                        ),
                         const SizedBox(width: 12),
                         const Text(
                           'Report Found',
@@ -364,7 +371,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    
+
                     // Case ID
                     _buildStatusRow(
                       'Case ID',
@@ -372,7 +379,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                       Icons.receipt_long,
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Status with enhanced display
                     _buildEnhancedStatusRow(
                       'Status',
@@ -380,7 +387,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                       Icons.info_outline,
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Status Message (if available)
                     if (_reportStatus!['statusMessage'] != null) ...[
                       _buildStatusRow(
@@ -390,25 +397,30 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    
+
                     // Type
                     _buildStatusRow(
                       'Type',
-                      _reportStatus!['type'] == 'voice' ? 'Voice Report' : 'Text Report',
-                      _reportStatus!['type'] == 'voice' ? Icons.mic : Icons.text_fields,
+                      _reportStatus!['type'] == 'voice'
+                          ? 'Voice Report'
+                          : 'Text Report',
+                      _reportStatus!['type'] == 'voice'
+                          ? Icons.mic
+                          : Icons.text_fields,
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Submitted Date
                     _buildStatusRow(
                       'Submitted',
                       _formatDate(_reportStatus!['submittedAt']),
                       Icons.calendar_today,
                     ),
-                    
+
                     // Last Updated (if different from submitted)
-                    if (_reportStatus!['lastUpdated'] != null && 
-                        _reportStatus!['lastUpdated'] != _reportStatus!['submittedAt']) ...[
+                    if (_reportStatus!['lastUpdated'] != null &&
+                        _reportStatus!['lastUpdated'] !=
+                            _reportStatus!['submittedAt']) ...[
                       const SizedBox(height: 16),
                       _buildStatusRow(
                         'Last Updated',
@@ -416,7 +428,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                         Icons.update,
                       ),
                     ],
-                    
+
                     // Estimated Resolution (if available)
                     if (_reportStatus!['estimatedResolution'] != null) ...[
                       const SizedBox(height: 16),
@@ -426,22 +438,28 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                         Icons.schedule,
                       ),
                     ],
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Status Description
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(_reportStatus!['status']).withOpacity(0.1),
+                        color: _getStatusColor(
+                          _reportStatus!['status'],
+                        ).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: _getStatusColor(_reportStatus!['status']).withOpacity(0.3),
+                          color: _getStatusColor(
+                            _reportStatus!['status'],
+                          ).withOpacity(0.3),
                         ),
                       ),
                       child: Text(
-                        ReportStatusService.getStatusMessage(_reportStatus!['status'] ?? 'submitted'),
+                        ReportStatusService.getStatusMessage(
+                          _reportStatus!['status'] ?? 'submitted',
+                        ),
                         style: TextStyle(
                           fontSize: 14,
                           color: _getStatusColor(_reportStatus!['status']),
@@ -503,7 +521,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
   Widget _buildEnhancedStatusRow(String label, String status, IconData icon) {
     Color statusColor = _getStatusColor(status);
     String displayName = ReportStatus.fromString(status).displayName;
-    
+
     return Row(
       children: [
         Icon(icon, color: AppColors.textSecondary, size: 20),

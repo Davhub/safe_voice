@@ -10,22 +10,25 @@ import 'dart:html' as html;
 class ReportDetailScreen extends StatefulWidget {
   final String caseId;
   final Map<String, dynamic> reportData;
-  
+  final bool isDialog; // NEW: Flag to indicate if shown in dialog
+
   const ReportDetailScreen({
-    super.key, 
-    required this.caseId, 
+    super.key,
+    required this.caseId,
     required this.reportData,
+    this.isDialog = false,
   });
 
   @override
   State<ReportDetailScreen> createState() => _ReportDetailScreenState();
 }
 
-class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProviderStateMixin {
+class _ReportDetailScreenState extends State<ReportDetailScreen>
+    with TickerProviderStateMixin {
   final _statusMessage = TextEditingController();
   final _adminNote = TextEditingController();
   final _scrollController = ScrollController();
-  
+
   String _selectedStatus = 'submitted';
   bool _updating = false;
   bool _playingAudio = false;
@@ -34,7 +37,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
   List<Map<String, dynamic>> _timeline = [];
   List<Map<String, dynamic>> _adminNotes = [];
   html.AudioElement? _audioPlayer;
-  
+
   late AnimationController _fadeAnimationController;
   late Animation<double> _fadeAnimation;
   late TabController _tabController;
@@ -44,15 +47,18 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
     super.initState();
     _selectedStatus = widget.reportData['status'] ?? 'submitted';
     _tabController = TabController(length: 4, vsync: this);
-    
+
     _fadeAnimationController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeAnimationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+        parent: _fadeAnimationController,
+        curve: Curves.easeInOut,
+      ),
     );
-    
+
     _loadInitialData();
   }
 
@@ -85,7 +91,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
 
   Future<void> _loadAudio() async {
     // Check both audioUrl (camelCase from user app) and audio_url (snake_case legacy)
-    if (widget.reportData['audioUrl'] != null || widget.reportData['audio_url'] != null) {
+    if (widget.reportData['audioUrl'] != null ||
+        widget.reportData['audio_url'] != null) {
       _audioUrl = await AdminReportService.getAudioDownloadUrl(widget.caseId);
     }
     setState(() {});
@@ -93,7 +100,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
 
   Future<void> _loadTimeline() async {
     try {
-      final timelineData = await AdminReportService.getReportTimeline(widget.caseId);
+      final timelineData = await AdminReportService.getReportTimeline(
+        widget.caseId,
+      );
       setState(() => _timeline = timelineData);
     } catch (e) {
       debugPrint('Error loading timeline: $e');
@@ -142,14 +151,19 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
       elevation: 0,
       backgroundColor: Colors.white,
       foregroundColor: Colors.black87,
+      leading:
+          widget.isDialog
+              ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+                tooltip: 'Close',
+              )
+              : null, // Use default back button for normal navigation
       title: Row(
         children: [
           const Text(
             'Case Details',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
           ),
           const SizedBox(width: 12),
           Container(
@@ -194,7 +208,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
     final priority = _getReportPriority();
     final submittedAt = widget.reportData['submittedAt'] as Timestamp?;
     final reportType = widget.reportData['type'] ?? 'text';
-    
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
@@ -216,7 +230,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
             children: [
               // Priority indicator
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: _getPriorityColor(priority).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -242,10 +259,13 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
                 ),
               ),
               const SizedBox(width: 12),
-              
+
               // Report type
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: _getTypeColor(reportType).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -259,15 +279,59 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
                   ),
                 ),
               ),
-              
+              const SizedBox(width: 12),
+
+              // Case Type (NEW)
+              Builder(
+                builder: (context) {
+                  final caseType =
+                      widget.reportData['caseType'] ??
+                      widget.reportData['case_type'] ??
+                      'FGM';
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getCaseTypeColor(caseType).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _getCaseTypeColor(caseType).withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.category_rounded,
+                          size: 14,
+                          color: _getCaseTypeColor(caseType),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _getCaseTypeDisplayName(caseType),
+                          style: TextStyle(
+                            color: _getCaseTypeColor(caseType),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+
               const Spacer(),
-              
+
               // Status chip
               _buildStatusChip(_selectedStatus, size: 'large'),
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // Submission details
           Row(
             children: [
@@ -275,23 +339,17 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
               const SizedBox(width: 6),
               Text(
                 'Submitted ${_formatDateTime(submittedAt)}',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
               ),
               const SizedBox(width: 20),
-              
+
               if (widget.reportData['location'] != null) ...[
                 Icon(Icons.location_on, color: Colors.grey[600], size: 16),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     widget.reportData['location'],
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -330,29 +388,29 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
           // Content section
           _buildContentCard(),
           const SizedBox(height: 16),
-          
+
           // Audio section (if available)
           if (_audioUrl != null) ...[
             _buildAudioCard(),
             const SizedBox(height: 16),
           ],
-          
+
           // Location details
           if (widget.reportData['location'] != null) ...[
             _buildLocationCard(),
             const SizedBox(height: 16),
           ],
-          
+
           // Reporter information (if available)
           _buildReporterCard(),
           const SizedBox(height: 16),
-          
+
           // Keywords/Tags
           if (widget.reportData['keywords'] != null) ...[
             _buildKeywordsCard(),
             const SizedBox(height: 16),
           ],
-          
+
           // Technical details
           _buildTechnicalDetailsCard(),
         ],
@@ -361,8 +419,11 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
   }
 
   Widget _buildContentCard() {
-    final content = widget.reportData['content'] ?? widget.reportData['description'] ?? 'No content available';
-    
+    final content =
+        widget.reportData['content'] ??
+        widget.reportData['description'] ??
+        'No content available';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -386,10 +447,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
               const SizedBox(width: 8),
               const Text(
                 'Report Content',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -404,10 +462,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
             ),
             child: Text(
               content,
-              style: const TextStyle(
-                fontSize: 16,
-                height: 1.5,
-              ),
+              style: const TextStyle(fontSize: 16, height: 1.5),
             ),
           ),
         ],
@@ -439,10 +494,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
               const SizedBox(width: 8),
               const Text(
                 'Audio Recording',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -467,9 +519,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
                           children: [
                             Text(
                               'Voice Recording Available',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: TextStyle(fontWeight: FontWeight.w600),
                             ),
                             Text(
                               'Audio evidence submitted with report',
@@ -488,12 +538,17 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
               const SizedBox(width: 12),
               ElevatedButton.icon(
                 onPressed: _playingAudio ? null : () => _playAudio(_audioUrl!),
-                icon: Icon(_playingAudio ? Icons.hourglass_empty : Icons.play_arrow),
+                icon: Icon(
+                  _playingAudio ? Icons.hourglass_empty : Icons.play_arrow,
+                ),
                 label: Text(_playingAudio ? 'Loading...' : 'Play Audio'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ],
@@ -507,7 +562,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
     final location = widget.reportData['location'];
     final latitude = widget.reportData['latitude'];
     final longitude = widget.reportData['longitude'];
-    
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -531,10 +586,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
               const SizedBox(width: 8),
               const Text(
                 'Location Details',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -556,10 +608,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
                       const SizedBox(height: 8),
                       Text(
                         'Coordinates: $latitude, $longitude',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
                       ),
                     ],
                   ],
@@ -586,7 +635,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
   Widget _buildReporterCard() {
     final userId = widget.reportData['userId'];
     final isAnonymous = widget.reportData['isAnonymous'] ?? false;
-    
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -610,10 +659,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
               const SizedBox(width: 8),
               const Text(
                 'Reporter Information',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -632,9 +678,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
                   const SizedBox(width: 8),
                   const Text(
                     'Anonymous Report',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -653,16 +697,11 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
                     children: [
                       Text(
                         'User ID: ${userId ?? 'Unknown'}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       const Text(
                         'Registered user report',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ],
                   ),
@@ -677,9 +716,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
 
   Widget _buildKeywordsCard() {
     final keywords = widget.reportData['keywords'] as List<dynamic>? ?? [];
-    
+
     if (keywords.isEmpty) return const SizedBox.shrink();
-    
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -703,10 +742,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
               const SizedBox(width: 8),
               const Text(
                 'Keywords & Tags',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -714,21 +750,29 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: keywords.map((keyword) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                keyword.toString(),
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            )).toList(),
+            children:
+                keywords
+                    .map(
+                      (keyword) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          keyword.toString(),
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
           ),
         ],
       ),
@@ -738,7 +782,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
   Widget _buildTechnicalDetailsCard() {
     final submittedAt = widget.reportData['submittedAt'] as Timestamp?;
     final deviceInfo = widget.reportData['deviceInfo'] as Map<String, dynamic>?;
-    
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -762,10 +806,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
               const SizedBox(width: 8),
               const Text(
                 'Technical Details',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -792,19 +833,13 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
             width: 120,
             child: Text(
               '$label:',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -816,10 +851,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
     return _timeline.isEmpty
         ? const Center(child: Text('No timeline data available'))
         : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _timeline.length,
-            itemBuilder: (context, index) => _buildTimelineItem(_timeline[index]),
-          );
+          padding: const EdgeInsets.all(16),
+          itemCount: _timeline.length,
+          itemBuilder: (context, index) => _buildTimelineItem(_timeline[index]),
+        );
   }
 
   Widget _buildTimelineItem(Map<String, dynamic> item) {
@@ -827,7 +862,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
     final action = item['action'] ?? 'Unknown action';
     final adminId = item['adminId'];
     final details = item['details'];
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -873,19 +908,13 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
                   const SizedBox(height: 4),
                   Text(
                     details,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
                   ),
                 ],
                 const SizedBox(height: 4),
                 Text(
                   '${_formatDateTime(timestamp)} ${adminId != null ? '• by $adminId' : ''}',
-                  style: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
                 ),
               ],
             ),
@@ -918,10 +947,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
             children: [
               const Text(
                 'Add Admin Note',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -961,16 +987,18 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
             ],
           ),
         ),
-        
+
         // Notes list
         Expanded(
-          child: _adminNotes.isEmpty
-              ? const Center(child: Text('No admin notes yet'))
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _adminNotes.length,
-                  itemBuilder: (context, index) => _buildNoteItem(_adminNotes[index]),
-                ),
+          child:
+              _adminNotes.isEmpty
+                  ? const Center(child: Text('No admin notes yet'))
+                  : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _adminNotes.length,
+                    itemBuilder:
+                        (context, index) => _buildNoteItem(_adminNotes[index]),
+                  ),
         ),
       ],
     );
@@ -980,7 +1008,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
     final timestamp = note['timestamp'] as Timestamp?;
     final adminId = note['adminId'] ?? 'Unknown Admin';
     final content = note['note'] ?? '';
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -1019,16 +1047,11 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
                   children: [
                     Text(
                       adminId,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     Text(
                       _formatDateTime(timestamp),
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
                     ),
                   ],
                 ),
@@ -1036,10 +1059,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            content,
-            style: const TextStyle(fontSize: 14, height: 1.4),
-          ),
+          Text(content, style: const TextStyle(fontSize: 14, height: 1.4)),
         ],
       ),
     );
@@ -1070,13 +1090,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
               children: [
                 const Text(
                   'Update Status',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                
+
                 DropdownButtonFormField<String>(
                   value: _selectedStatus,
                   decoration: InputDecoration(
@@ -1085,23 +1102,27 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  items: AdminReportService.getStatusOptions().map((status) {
-                    return DropdownMenuItem(
-                      value: status,
-                      child: Row(
-                        children: [
-                          _buildStatusChip(status, size: 'small'),
-                          const SizedBox(width: 8),
-                          Text(AdminReportService.getStatusDisplayName(status)),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (value) => setState(() => _selectedStatus = value!),
+                  items:
+                      AdminReportService.getStatusOptions().map((status) {
+                        return DropdownMenuItem(
+                          value: status,
+                          child: Row(
+                            children: [
+                              _buildStatusChip(status, size: 'small'),
+                              const SizedBox(width: 8),
+                              Text(
+                                AdminReportService.getStatusDisplayName(status),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                  onChanged:
+                      (value) => setState(() => _selectedStatus = value!),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 TextField(
                   controller: _statusMessage,
                   maxLines: 3,
@@ -1113,9 +1134,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -1125,17 +1146,20 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: _updating 
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('Update Status'),
+                    child:
+                        _updating
+                            ? const CircularProgressIndicator(
+                              color: Colors.white,
+                            )
+                            : const Text('Update Status'),
                   ),
                 ),
               ],
             ),
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Quick actions
           Container(
             width: double.infinity,
@@ -1156,13 +1180,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
               children: [
                 const Text(
                   'Quick Actions',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                
+
                 Row(
                   children: [
                     Expanded(
@@ -1184,9 +1205,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 Row(
                   children: [
                     Expanded(
@@ -1216,7 +1237,12 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
     );
   }
 
-  Widget _buildActionButton(String label, IconData icon, Color color, VoidCallback onPressed) {
+  Widget _buildActionButton(
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onPressed,
+  ) {
     return ElevatedButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, size: 18),
@@ -1233,7 +1259,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
     final color = _getStatusColor(status);
     final isLarge = size == 'large';
     final isSmall = size == 'small';
-    
+
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isLarge ? 12 : (isSmall ? 6 : 8),
@@ -1258,57 +1284,118 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
   String _getReportPriority() {
     final content = (widget.reportData['content'] ?? '').toLowerCase();
     final keywords = widget.reportData['keywords'] as List<dynamic>? ?? [];
-    
-    final highPriorityKeywords = ['emergency', 'urgent', 'danger', 'help', 'attack', 'violence', 'assault'];
-    final mediumPriorityKeywords = ['threat', 'harassment', 'unsafe', 'concern', 'suspicious'];
-    
-    if (keywords.any((k) => highPriorityKeywords.contains(k.toString().toLowerCase())) ||
+
+    final highPriorityKeywords = [
+      'emergency',
+      'urgent',
+      'danger',
+      'help',
+      'attack',
+      'violence',
+      'assault',
+    ];
+    final mediumPriorityKeywords = [
+      'threat',
+      'harassment',
+      'unsafe',
+      'concern',
+      'suspicious',
+    ];
+
+    if (keywords.any(
+          (k) => highPriorityKeywords.contains(k.toString().toLowerCase()),
+        ) ||
         highPriorityKeywords.any((k) => content.contains(k))) {
       return 'high';
     }
-    
-    if (keywords.any((k) => mediumPriorityKeywords.contains(k.toString().toLowerCase())) ||
+
+    if (keywords.any(
+          (k) => mediumPriorityKeywords.contains(k.toString().toLowerCase()),
+        ) ||
         mediumPriorityKeywords.any((k) => content.contains(k))) {
       return 'medium';
     }
-    
+
     return 'low';
   }
 
   Color _getPriorityColor(String priority) {
     switch (priority) {
-      case 'high': return Colors.red;
-      case 'medium': return Colors.orange;
-      case 'low': return Colors.green;
-      default: return Colors.grey;
+      case 'high':
+        return Colors.red;
+      case 'medium':
+        return Colors.orange;
+      case 'low':
+        return Colors.green;
+      default:
+        return Colors.grey;
     }
   }
 
   IconData _getPriorityIcon(String priority) {
     switch (priority) {
-      case 'high': return Icons.error;
-      case 'medium': return Icons.warning;
-      case 'low': return Icons.info;
-      default: return Icons.help;
+      case 'high':
+        return Icons.error;
+      case 'medium':
+        return Icons.warning;
+      case 'low':
+        return Icons.info;
+      default:
+        return Icons.help;
     }
   }
 
   Color _getTypeColor(String type) {
     switch (type) {
-      case 'text': return Colors.blue;
-      case 'voice': return Colors.green;
-      case 'mixed': return Colors.purple;
-      default: return Colors.grey;
+      case 'text':
+        return Colors.blue;
+      case 'voice':
+        return Colors.green;
+      case 'mixed':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color _getCaseTypeColor(String caseType) {
+    switch (caseType) {
+      case 'FGM':
+        return const Color(0xFFE91E63);
+      case 'SEXUAL_ASSAULT':
+        return const Color(0xFF9C27B0);
+      case 'GBV':
+        return const Color(0xFF673AB7);
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getCaseTypeDisplayName(String caseType) {
+    switch (caseType) {
+      case 'FGM':
+        return 'FGM';
+      case 'SEXUAL_ASSAULT':
+        return 'Sexual Assault';
+      case 'GBV':
+        return 'GBV';
+      default:
+        return caseType;
     }
   }
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'submitted': return Colors.orange;
-      case 'under_review': return Colors.blue;
-      case 'resolved': return Colors.green;
-      case 'closed': return Colors.grey;
-      default: return Colors.grey;
+      case 'submitted':
+        return Colors.orange;
+      case 'under_review':
+        return Colors.blue;
+      case 'resolved':
+        return Colors.green;
+      case 'closed':
+        return Colors.grey;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -1324,7 +1411,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
     final date = timestamp.toDate();
     final now = DateTime.now();
     final diff = now.difference(date);
-    
+
     if (diff.inDays == 0) {
       // Today - show time
       final hour = date.hour.toString().padLeft(2, '0');
@@ -1349,20 +1436,21 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
   // Action methods
   Future<void> _updateStatus() async {
     setState(() => _updating = true);
-    
+
     try {
       print('🔄 Attempting to update status to: $_selectedStatus');
       print('Admin ID: ${_adminInfo?['uid']}');
       print('Admin Email: ${_adminInfo?['email']}');
       print('Case ID: ${widget.caseId}');
-      
+
       final success = await AdminReportService.updateReportStatus(
         caseId: widget.caseId,
         status: _selectedStatus,
-        statusMessage: _statusMessage.text.isNotEmpty ? _statusMessage.text : null,
+        statusMessage:
+            _statusMessage.text.isNotEmpty ? _statusMessage.text : null,
         adminId: _adminInfo?['uid'],
       );
-      
+
       if (success) {
         _statusMessage.clear();
         await _loadTimeline(); // Refresh timeline
@@ -1380,13 +1468,14 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
       if (mounted) {
         String errorMessage = 'Failed to update status: ';
         if (e.code == 'permission-denied') {
-          errorMessage += 'Permission denied. Make sure you are logged in as an admin.';
+          errorMessage +=
+              'Permission denied. Make sure you are logged in as an admin.';
         } else if (e.code == 'not-found') {
           errorMessage += 'Report not found.';
         } else {
           errorMessage += '${e.code} - ${e.message}';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -1407,20 +1496,20 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
         );
       }
     }
-    
+
     setState(() => _updating = false);
   }
 
   Future<void> _addNote() async {
     if (_adminNote.text.trim().isEmpty) return;
-    
+
     try {
       final success = await AdminReportService.addAdminNote(
         caseId: widget.caseId,
         note: _adminNote.text.trim(),
         adminId: _adminInfo?['uid'] ?? 'unknown',
       );
-      
+
       if (success) {
         _adminNote.clear();
         await _loadAdminNotes(); // Refresh notes
@@ -1428,14 +1517,14 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
           const SnackBar(content: Text('Note added successfully')),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to add note')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Failed to add note')));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -1462,7 +1551,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
   }
 
   void _openMapLocation(double latitude, double longitude) async {
-    final Uri uri = Uri.parse('https://maps.google.com/?q=$latitude,$longitude');
+    final Uri uri = Uri.parse(
+      'https://maps.google.com/?q=$latitude,$longitude',
+    );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     }
@@ -1470,9 +1561,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> with TickerProv
 
   void _updatePriority(String priority) {
     // TODO: Implement priority update
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Priority updated to $priority')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Priority updated to $priority')));
   }
 
   void _quickResolve() {
@@ -1520,7 +1611,7 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
     try {
       _audioPlayer = html.AudioElement(widget.url);
       _audioPlayer!.preload = 'auto';
-      
+
       // Listen to events
       _audioPlayer!.onLoadedData.listen((_) {
         if (mounted) {
@@ -1529,7 +1620,7 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
           });
         }
       });
-      
+
       _audioPlayer!.onError.listen((error) {
         if (mounted) {
           setState(() {
@@ -1539,25 +1630,25 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
           });
         }
       });
-      
+
       _audioPlayer!.onPlay.listen((_) {
         if (mounted) {
           setState(() => _isPlaying = true);
         }
       });
-      
+
       _audioPlayer!.onPause.listen((_) {
         if (mounted) {
           setState(() => _isPlaying = false);
         }
       });
-      
+
       _audioPlayer!.onEnded.listen((_) {
         if (mounted) {
           setState(() => _isPlaying = false);
         }
       });
-      
+
       // Load the audio
       _audioPlayer!.load();
     } catch (e) {
@@ -1577,7 +1668,7 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
 
   void _togglePlayPause() {
     if (_audioPlayer == null) return;
-    
+
     if (_isPlaying) {
       _audioPlayer!.pause();
     } else {
@@ -1625,7 +1716,11 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
                     ),
                     child: Column(
                       children: [
-                        const Icon(Icons.warning_amber_rounded, size: 64, color: Colors.orange),
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          size: 64,
+                          color: Colors.orange,
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           _errorMessage ?? 'Test Audio File',
@@ -1646,7 +1741,10 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
                           '• It\'s a mock/test audio file created for development\n'
                           '• It doesn\'t contain actual audio data\n'
                           '• The M4A format may not be fully supported',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                          ),
                         ),
                         const SizedBox(height: 20),
                         const Divider(),
@@ -1660,7 +1758,10 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
                           '1. Enable real audio recording on the user app\n'
                           '2. Test with actual voice recordings\n'
                           '3. Check Firebase Storage for file validity',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                          ),
                         ),
                       ],
                     ),
@@ -1673,7 +1774,10 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
                         onPressed: () async {
                           final Uri uri = Uri.parse(widget.url);
                           if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
                           }
                         },
                         icon: const Icon(Icons.open_in_new, size: 16),
@@ -1757,7 +1861,10 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
                     onPressed: () async {
                       final Uri uri = Uri.parse(widget.url);
                       if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
                       }
                     },
                     icon: const Icon(Icons.download, size: 16),

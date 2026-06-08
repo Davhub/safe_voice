@@ -85,7 +85,8 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
                 ),
                 const SizedBox(height: 8),
                 StreamBuilder<int>(
-                  stream: AdminNotificationService.getUnreadNotificationCountStream(),
+                  stream:
+                      AdminNotificationService.getUnreadNotificationCountStream(),
                   builder: (context, snapshot) {
                     final unreadCount = snapshot.data ?? 0;
                     return Text(
@@ -157,35 +158,39 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
               decoration: InputDecoration(
                 hintText: 'Search notifications...',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
+                suffixIcon:
+                    _searchQuery.isNotEmpty
+                        ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                        : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+              onChanged:
+                  (value) => setState(() => _searchQuery = value.toLowerCase()),
             ),
           ),
           const SizedBox(width: 16),
-          ...['all', 'unread', 'urgent'].map((filter) => Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: FilterChip(
-                  label: Text(filter.toUpperCase()),
-                  selected: _selectedFilter == filter,
-                  onSelected: (selected) {
-                    setState(() => _selectedFilter = selected ? filter : 'all');
-                  },
-                  selectedColor: AppColors.primary.withOpacity(0.2),
-                  checkmarkColor: AppColors.primary,
-                ),
-              )),
+          ...['all', 'unread', 'urgent'].map(
+            (filter) => Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: FilterChip(
+                label: Text(filter.toUpperCase()),
+                selected: _selectedFilter == filter,
+                onSelected: (selected) {
+                  setState(() => _selectedFilter = selected ? filter : 'all');
+                },
+                selectedColor: AppColors.primary.withOpacity(0.2),
+                checkmarkColor: AppColors.primary,
+              ),
+            ),
+          ),
           const SizedBox(width: 16),
           TextButton.icon(
             onPressed: () => AdminNotificationService.markAllAsRead(),
@@ -208,7 +213,8 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: CachedDataService.getNotificationsStream(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
@@ -224,19 +230,24 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
         var notifications = snapshot.data!;
 
         // Apply filters
-        notifications = notifications.where((data) {
-          // Search filter
-          if (_searchQuery.isNotEmpty) {
-            final searchText = '${data['title'] ?? ''} ${data['message'] ?? ''}'.toLowerCase();
-            if (!searchText.contains(_searchQuery)) return false;
-          }
+        notifications =
+            notifications.where((data) {
+              // Search filter
+              if (_searchQuery.isNotEmpty) {
+                final searchText =
+                    '${data['title'] ?? ''} ${data['message'] ?? ''}'
+                        .toLowerCase();
+                if (!searchText.contains(_searchQuery)) return false;
+              }
 
-          // Status filter
-          if (_selectedFilter == 'unread' && (data['isRead'] == true)) return false;
-          if (_selectedFilter == 'urgent' && data['priority'] != 'urgent') return false;
+              // Status filter
+              if (_selectedFilter == 'unread' && (data['isRead'] == true))
+                return false;
+              if (_selectedFilter == 'urgent' && data['priority'] != 'urgent')
+                return false;
 
-          return true;
-        }).toList();
+              return true;
+            }).toList();
 
         return Container(
           decoration: BoxDecoration(
@@ -256,7 +267,9 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
             padding: const EdgeInsets.all(16),
             itemCount: notifications.length,
             separatorBuilder: (context, index) => const Divider(height: 24),
-            itemBuilder: (context, index) => _buildNotificationCard(notifications[index]),
+            itemBuilder:
+                (context, index) =>
+                    _buildNotificationCard(notifications[index]),
           ),
         );
       },
@@ -286,10 +299,16 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isRead ? Colors.transparent : _getPriorityColor(priority).withOpacity(0.05),
+          color:
+              isRead
+                  ? Colors.transparent
+                  : _getPriorityColor(priority).withOpacity(0.05),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isRead ? Colors.transparent : _getPriorityColor(priority).withOpacity(0.2),
+            color:
+                isRead
+                    ? Colors.transparent
+                    : _getPriorityColor(priority).withOpacity(0.2),
             width: 1,
           ),
         ),
@@ -310,7 +329,7 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
               ),
             ),
             const SizedBox(width: 16),
-            
+
             // Content
             Expanded(
               child: Column(
@@ -332,14 +351,18 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
                         child: Text(
                           title,
                           style: TextStyle(
-                            fontWeight: isRead ? FontWeight.w600 : FontWeight.bold,
+                            fontWeight:
+                                isRead ? FontWeight.w600 : FontWeight.bold,
                             fontSize: 16,
                           ),
                         ),
                       ),
                       if (priority == 'urgent')
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.red.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(4),
@@ -347,7 +370,11 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: const [
-                              Icon(Icons.priority_high, color: Colors.red, size: 12),
+                              Icon(
+                                Icons.priority_high,
+                                color: Colors.red,
+                                size: 12,
+                              ),
                               SizedBox(width: 4),
                               Text(
                                 'URGENT',
@@ -365,26 +392,28 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
                   const SizedBox(height: 8),
                   Text(
                     message,
-                    style: TextStyle(
-                      color: Colors.grey[700],
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.grey[700], fontSize: 14),
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: Colors.grey[500],
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         AdminNotificationService.formatTimestamp(timestamp),
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.grey[500], fontSize: 12),
                       ),
                       if (reportId != null) ...[
                         const SizedBox(width: 16),
-                        Icon(Icons.arrow_forward, size: 14, color: Colors.grey[500]),
+                        Icon(
+                          Icons.arrow_forward,
+                          size: 14,
+                          color: Colors.grey[500],
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           'View Report',
@@ -400,7 +429,7 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
                 ],
               ),
             ),
-            
+
             // Actions
             PopupMenuButton<String>(
               icon: Icon(Icons.more_vert, color: Colors.grey[600]),
@@ -415,28 +444,33 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
                   }
                 }
               },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'toggle_read',
-                  child: Row(
-                    children: [
-                      Icon(isRead ? Icons.mark_email_unread : Icons.mark_email_read),
-                      const SizedBox(width: 8),
-                      Text(isRead ? 'Mark as unread' : 'Mark as read'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_outline, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Delete', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
+              itemBuilder:
+                  (context) => [
+                    PopupMenuItem(
+                      value: 'toggle_read',
+                      child: Row(
+                        children: [
+                          Icon(
+                            isRead
+                                ? Icons.mark_email_unread
+                                : Icons.mark_email_read,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(isRead ? 'Mark as unread' : 'Mark as read'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Delete', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
             ),
           ],
         ),
@@ -533,22 +567,27 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
     }
   }
 
-  void _openReportDetail(String reportId, Map<String, dynamic> notificationData) async {
+  void _openReportDetail(
+    String reportId,
+    Map<String, dynamic> notificationData,
+  ) async {
     try {
       // Fetch the actual report data
-      final reportDoc = await FirebaseFirestore.instance
-          .collection('reports')
-          .doc(reportId)
-          .get();
-      
+      final reportDoc =
+          await FirebaseFirestore.instance
+              .collection('reports')
+              .doc(reportId)
+              .get();
+
       if (reportDoc.exists && mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ReportDetailScreen(
-              caseId: reportId,
-              reportData: reportDoc.data()!,
-            ),
+            builder:
+                (context) => ReportDetailScreen(
+                  caseId: reportId,
+                  reportData: reportDoc.data()!,
+                ),
           ),
         );
       }
@@ -567,24 +606,27 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
   void _confirmClearRead() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear Read Notifications'),
-        content: const Text('Are you sure you want to delete all read notifications?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Clear Read Notifications'),
+            content: const Text(
+              'Are you sure you want to delete all read notifications?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  AdminNotificationService.clearReadNotifications();
+                  Navigator.pop(context);
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Clear'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              AdminNotificationService.clearReadNotifications();
-              Navigator.pop(context);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Clear'),
-          ),
-        ],
-      ),
     );
   }
 }

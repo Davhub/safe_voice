@@ -47,9 +47,10 @@ class _FirebaseTestScreenState extends State<FirebaseTestScreen> {
 
       // Test 1: Firebase Auth
       User? currentUser = FirebaseAuth.instance.currentUser;
-      String authStatus = currentUser != null 
-          ? 'User logged in: ${currentUser.email}' 
-          : 'No user logged in';
+      String authStatus =
+          currentUser != null
+              ? 'User logged in: ${currentUser.email}'
+              : 'No user logged in';
 
       setState(() {
         _status = 'Step 2: Testing Firestore...\nAuth: $authStatus';
@@ -62,14 +63,13 @@ class _FirebaseTestScreenState extends State<FirebaseTestScreen> {
           .get();
 
       setState(() {
-        _status = 'Step 3: Testing Admin Collection...\nAuth: $authStatus\nFirestore: Connected';
+        _status =
+            'Step 3: Testing Admin Collection...\nAuth: $authStatus\nFirestore: Connected';
       });
 
       // Test 3: Check admins collection
-      QuerySnapshot adminQuery = await FirebaseFirestore.instance
-          .collection('admins')
-          .limit(1)
-          .get();
+      QuerySnapshot adminQuery =
+          await FirebaseFirestore.instance.collection('admins').limit(1).get();
 
       setState(() {
         _status = '''✅ Firebase Tests Complete!
@@ -81,7 +81,6 @@ Admin Collection: ${adminQuery.docs.length} documents found
 Admin UID Check: ${currentUser?.uid ?? 'N/A'}''';
         _isLoading = false;
       });
-
     } catch (e) {
       setState(() {
         _status = '❌ Firebase Test Failed: $e';
@@ -93,19 +92,14 @@ Admin UID Check: ${currentUser?.uid ?? 'N/A'}''';
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Firebase Connectivity Test'),
-      ),
+      appBar: AppBar(title: const Text('Firebase Connectivity Test')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             if (_isLoading) const CircularProgressIndicator(),
             const SizedBox(height: 20),
-            Text(
-              _status,
-              style: const TextStyle(fontSize: 16),
-            ),
+            Text(_status, style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 40),
             ElevatedButton(
               onPressed: () async {
@@ -113,9 +107,9 @@ Admin UID Check: ${currentUser?.uid ?? 'N/A'}''';
                 try {
                   UserCredential result = await FirebaseAuth.instance
                       .signInWithEmailAndPassword(
-                    email: 'admin@safevoice.com',
-                    password: 'admin123',
-                  );
+                        email: 'admin@safevoice.com',
+                        password: 'admin123',
+                      );
                   setState(() {
                     _status = 'Admin login successful: ${result.user?.email}';
                   });

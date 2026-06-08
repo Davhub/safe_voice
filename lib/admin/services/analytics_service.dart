@@ -14,14 +14,19 @@ class AnalyticsService {
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
-      final snapshot = await _firestore
-          .collection('reports')
-          .where('submittedAt',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('submittedAt',
-              isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
-          .count()
-          .get();
+      final snapshot =
+          await _firestore
+              .collection('reports')
+              .where(
+                'submittedAt',
+                isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+              )
+              .where(
+                'submittedAt',
+                isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
+              )
+              .count()
+              .get();
 
       return snapshot.count ?? 0;
     } catch (e) {
@@ -31,18 +36,25 @@ class AnalyticsService {
   }
 
   /// Get reports by date with case type breakdown
-  static Future<Map<String, dynamic>> getDailyReportDetails(DateTime date) async {
+  static Future<Map<String, dynamic>> getDailyReportDetails(
+    DateTime date,
+  ) async {
     try {
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
-      final snapshot = await _firestore
-          .collection('reports')
-          .where('submittedAt',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('submittedAt',
-              isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
-          .get();
+      final snapshot =
+          await _firestore
+              .collection('reports')
+              .where(
+                'submittedAt',
+                isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+              )
+              .where(
+                'submittedAt',
+                isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
+              )
+              .get();
 
       int totalCount = snapshot.docs.length;
       Map<String, int> caseTypeCounts = {
@@ -58,7 +70,7 @@ class AnalyticsService {
 
       for (var doc in snapshot.docs) {
         final data = doc.data();
-        
+
         // Count by case type
         final caseType = data['caseType'] ?? data['case_type'] ?? 'FGM';
         caseTypeCounts[caseType] = (caseTypeCounts[caseType] ?? 0) + 1;
@@ -90,16 +102,23 @@ class AnalyticsService {
   /// Get report count for a specific week (starting from weekStart)
   static Future<int> getWeeklyReportCount(DateTime weekStart) async {
     try {
-      final startOfWeek = DateTime(weekStart.year, weekStart.month, weekStart.day);
+      final startOfWeek = DateTime(
+        weekStart.year,
+        weekStart.month,
+        weekStart.day,
+      );
       final endOfWeek = startOfWeek.add(const Duration(days: 7));
 
-      final snapshot = await _firestore
-          .collection('reports')
-          .where('submittedAt',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek))
-          .where('submittedAt', isLessThan: Timestamp.fromDate(endOfWeek))
-          .count()
-          .get();
+      final snapshot =
+          await _firestore
+              .collection('reports')
+              .where(
+                'submittedAt',
+                isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek),
+              )
+              .where('submittedAt', isLessThan: Timestamp.fromDate(endOfWeek))
+              .count()
+              .get();
 
       return snapshot.count ?? 0;
     } catch (e) {
@@ -110,14 +129,15 @@ class AnalyticsService {
 
   /// Get daily breakdown for a week
   static Future<List<Map<String, dynamic>>> getWeeklyReportBreakdown(
-      DateTime weekStart) async {
+    DateTime weekStart,
+  ) async {
     try {
       List<Map<String, dynamic>> weeklyData = [];
 
       for (int i = 0; i < 7; i++) {
         final currentDay = weekStart.add(Duration(days: i));
         final dailyCount = await getDailyReportCount(currentDay);
-        
+
         weeklyData.add({
           'date': currentDay.toIso8601String(),
           'dayOfWeek': _getDayName(currentDay.weekday),
@@ -140,13 +160,16 @@ class AnalyticsService {
       final startOfMonth = DateTime(year, month, 1);
       final endOfMonth = DateTime(year, month + 1, 1);
 
-      final snapshot = await _firestore
-          .collection('reports')
-          .where('submittedAt',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
-          .where('submittedAt', isLessThan: Timestamp.fromDate(endOfMonth))
-          .count()
-          .get();
+      final snapshot =
+          await _firestore
+              .collection('reports')
+              .where(
+                'submittedAt',
+                isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
+              )
+              .where('submittedAt', isLessThan: Timestamp.fromDate(endOfMonth))
+              .count()
+              .get();
 
       return snapshot.count ?? 0;
     } catch (e) {
@@ -157,7 +180,9 @@ class AnalyticsService {
 
   /// Get daily breakdown for a month
   static Future<List<Map<String, dynamic>>> getMonthlyReportBreakdown(
-      int year, int month) async {
+    int year,
+    int month,
+  ) async {
     try {
       List<Map<String, dynamic>> monthlyData = [];
       final daysInMonth = DateTime(year, month + 1, 0).day;
@@ -165,7 +190,7 @@ class AnalyticsService {
       for (int day = 1; day <= daysInMonth; day++) {
         final currentDay = DateTime(year, month, day);
         final dailyCount = await getDailyReportCount(currentDay);
-        
+
         monthlyData.add({
           'date': currentDay.toIso8601String(),
           'day': day,
@@ -191,13 +216,17 @@ class AnalyticsService {
       Query query = _firestore.collection('reports');
 
       if (startDate != null) {
-        query = query.where('submittedAt',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+        query = query.where(
+          'submittedAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+        );
       }
 
       if (endDate != null) {
-        query = query.where('submittedAt',
-            isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+        query = query.where(
+          'submittedAt',
+          isLessThanOrEqualTo: Timestamp.fromDate(endDate),
+        );
       }
 
       final snapshot = await query.get();
@@ -261,13 +290,17 @@ class AnalyticsService {
       Query query = _firestore.collection('reports');
 
       if (startDate != null) {
-        query = query.where('submittedAt',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+        query = query.where(
+          'submittedAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+        );
       }
 
       if (endDate != null) {
-        query = query.where('submittedAt',
-            isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+        query = query.where(
+          'submittedAt',
+          isLessThanOrEqualTo: Timestamp.fromDate(endDate),
+        );
       }
 
       final snapshot = await query.get();
@@ -278,22 +311,20 @@ class AnalyticsService {
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final location = data['location'] ?? 'Unknown';
-        
+
         if (location.isNotEmpty && location != 'Unknown') {
           locationCounts[location] = (locationCounts[location] ?? 0) + 1;
         }
       }
 
       // Sort by count and return top locations
-      final sortedLocations = locationCounts.entries.toList()
-        ..sort((a, b) => b.value.compareTo(a.value));
+      final sortedLocations =
+          locationCounts.entries.toList()
+            ..sort((a, b) => b.value.compareTo(a.value));
 
       return sortedLocations
           .take(limit)
-          .map((entry) => {
-                'location': entry.key,
-                'count': entry.value,
-              })
+          .map((entry) => {'location': entry.key, 'count': entry.value})
           .toList();
     } catch (e) {
       debugPrint('Error in getTopReportingLocations: $e');
@@ -312,13 +343,17 @@ class AnalyticsService {
       Query query = _firestore.collection('reports');
 
       if (startDate != null) {
-        query = query.where('submittedAt',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+        query = query.where(
+          'submittedAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+        );
       }
 
       if (endDate != null) {
-        query = query.where('submittedAt',
-            isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+        query = query.where(
+          'submittedAt',
+          isLessThanOrEqualTo: Timestamp.fromDate(endDate),
+        );
       }
 
       final snapshot = await query.get();
@@ -357,15 +392,21 @@ class AnalyticsService {
       // Get counts for both periods
       final currentQuery = _firestore
           .collection('reports')
-          .where('submittedAt',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(currentStart))
-          .where('submittedAt',
-              isLessThanOrEqualTo: Timestamp.fromDate(currentEnd));
+          .where(
+            'submittedAt',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(currentStart),
+          )
+          .where(
+            'submittedAt',
+            isLessThanOrEqualTo: Timestamp.fromDate(currentEnd),
+          );
 
       final previousQuery = _firestore
           .collection('reports')
-          .where('submittedAt',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(previousStart))
+          .where(
+            'submittedAt',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(previousStart),
+          )
           .where('submittedAt', isLessThan: Timestamp.fromDate(previousEnd));
 
       final currentSnapshot = await currentQuery.count().get();
@@ -411,13 +452,22 @@ class AnalyticsService {
       // Fetch all analytics in parallel
       final results = await Future.wait([
         getReportsByCaseType(
-            startDate: effectiveStartDate, endDate: effectiveEndDate),
+          startDate: effectiveStartDate,
+          endDate: effectiveEndDate,
+        ),
         getReportsByStatus(
-            startDate: effectiveStartDate, endDate: effectiveEndDate),
+          startDate: effectiveStartDate,
+          endDate: effectiveEndDate,
+        ),
         getTopReportingLocations(
-            limit: 5, startDate: effectiveStartDate, endDate: effectiveEndDate),
+          limit: 5,
+          startDate: effectiveStartDate,
+          endDate: effectiveEndDate,
+        ),
         getComparisonData(
-            currentStart: effectiveStartDate, currentEnd: effectiveEndDate),
+          currentStart: effectiveStartDate,
+          currentEnd: effectiveEndDate,
+        ),
       ]);
 
       return {

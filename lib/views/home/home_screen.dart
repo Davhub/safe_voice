@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:safe_voice/constant/api_routes.dart';
 import 'package:safe_voice/views/views.dart';
 import 'package:safe_voice/constant/colors.dart';
 import 'package:safe_voice/routing/app_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:safe_voice/models/report.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +42,6 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              
             ],
           ),
         ),
@@ -66,17 +63,12 @@ class HomeScreen extends StatelessWidget {
                 // Create a Report Card
                 _buildGridCard(
                   icon: Icons.edit_note,
-                  title: 'Submit a Report',
+                  title: 'Report a Case',
                   subtitle: 'Submit an anonymous report',
                   color: AppColors.primary,
-                  onTap: () {
-                    final tabNav = TabNavigationProvider.of(context);
-                    if (tabNav != null) {
-                      tabNav.switchToTab(1); // Switch to Report tab (index 1)
-                    }
-                  },
+                  onTap: () => _showCaseTypeSelectionModal(context),
                 ),
-                
+
                 // Learn about FGM Card
                 _buildGridCard(
                   icon: Icons.school,
@@ -90,7 +82,7 @@ class HomeScreen extends StatelessWidget {
                     }
                   },
                 ),
-                
+
                 // Check Report Status Card
                 _buildGridCard(
                   icon: Icons.search,
@@ -100,11 +92,13 @@ class HomeScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const CheckStatusScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const CheckStatusScreen(),
+                      ),
                     );
                   },
                 ),
-                
+
                 // Book a Session Card
                 _buildGridCard(
                   icon: Icons.support,
@@ -112,15 +106,18 @@ class HomeScreen extends StatelessWidget {
                   subtitle: 'For Counselling and Psychosocial support',
                   color: AppColors.primary,
                   onTap: () async {
-                          // Open WhatsApp with pre-filled message
-                          await _launchURL('https://wa.me/2348032386064?text=Hello%2C%20I%20need%20help%20regarding%20FGM%20support.', context);
-                        },
+                    // Open WhatsApp with pre-filled message
+                    await _launchURL(
+                      'https://wa.me/2348032386064?text=Hello%2C%20I%20need%20help%20regarding%20FGM%20support.',
+                      context,
+                    );
+                  },
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 30),
-            
+
             // Emergency Quick Actions Section
             Container(
               padding: const EdgeInsets.all(20),
@@ -142,7 +139,7 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 children: [
                   const Text(
-                    '🚨 Emergency Support',
+                    'Emergency Support',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -157,7 +154,7 @@ class HomeScreen extends StatelessWidget {
                         icon: Icons.phone,
                         label: 'Call Help',
                         onTap: () async {
-                          await _launchURL('tel:+2348032386064', context);
+                          await _launchURL('tel:+2348131849423', context);
                         },
                       ),
                       _buildQuickActionButton(
@@ -165,14 +162,20 @@ class HomeScreen extends StatelessWidget {
                         label: 'Text Help',
                         onTap: () async {
                           // Open WhatsApp with pre-filled message
-                          await _launchURL('https://wa.me/2348032386064?text=Hello%2C%20I%20need%20help%20regarding%20FGM%20support.', context);
+                          await _launchURL(
+                            'https://wa.me/2348032386064?text=Hello%2C%20I%20need%20help%20regarding%20FGM%20support.',
+                            context,
+                          );
                         },
                       ),
                       _buildQuickActionButton(
                         icon: Icons.location_on,
                         label: 'Find Center',
                         onTap: () async {
-                          await _launchURL('https://trailblazerinitiative.org.ng/fgm-help-center', context);
+                          await _launchURL(
+                            'https://trailblazerinitiative.org.ng/contact/',
+                            context,
+                          );
                         },
                       ),
                     ],
@@ -180,9 +183,9 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 25),
-            
+
             // Community Impact Section
             // Card(
             //   color: AppColors.card,
@@ -222,9 +225,8 @@ class HomeScreen extends StatelessWidget {
             //     ),
             //   ),
             // ),
-            
             const SizedBox(height: 25),
-            
+
             // Safety Tips Section
             SizedBox(
               height: 120,
@@ -234,7 +236,7 @@ class HomeScreen extends StatelessWidget {
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 4.0),
                     child: Text(
-                      '💡 Safety Tips',
+                      'Safety Tips',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -255,7 +257,9 @@ class HomeScreen extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: AppColors.secondary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.secondary.withOpacity(0.3)),
+                            border: Border.all(
+                              color: AppColors.secondary.withOpacity(0.3),
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,11 +291,10 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 30),
-            
+
             // Additional content can be added here for future enhancements
-            
           ],
         ),
       ),
@@ -332,11 +335,7 @@ class HomeScreen extends StatelessWidget {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  icon,
-                  size: 32,
-                  color: AppColors.textOnPrimary,
-                ),
+                child: Icon(icon, size: 32, color: AppColors.textOnPrimary),
               ),
               const SizedBox(height: 16),
               Text(
@@ -374,9 +373,7 @@ class HomeScreen extends StatelessWidget {
       width: 150,
       margin: const EdgeInsets.only(right: 16),
       child: Card(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 2,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -390,7 +387,9 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 // Placeholder for an image
-                child: const Center(child: Icon(Icons.image, size: 50, color: Colors.grey)),
+                child: const Center(
+                  child: Icon(Icons.image, size: 50, color: Colors.grey),
+                ),
               ),
             ),
             Padding(
@@ -410,10 +409,7 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   const Text(
                     'Short description of the topic.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -430,25 +426,24 @@ class HomeScreen extends StatelessWidget {
   Future<void> _launchURL(String url, BuildContext context) async {
     try {
       final Uri uri = Uri.parse(url);
-      
+
       // First, try the simplest approach
       if (await launchUrl(uri)) {
         return; // Success
       }
-      
+
       // Fallback 1: Try with external application mode
       if (await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         return; // Success
       }
-      
+
       // Fallback 2: Try with platform default mode
       if (await launchUrl(uri, mode: LaunchMode.platformDefault)) {
         return; // Success
       }
-      
+
       // If all methods fail, show error
       throw Exception('Could not launch $url');
-      
     } catch (e) {
       debugPrint('URL Launch Error: $e');
       if (context.mounted) {
@@ -495,28 +490,205 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  /// Show case type selection modal before navigating to report screen
+  void _showCaseTypeSelectionModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.report_problem_outlined,
+                    size: 48,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Select Report Type',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Please choose the type of incident you want to report',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                // Case Type Options
+                _buildCaseTypeOption(
+                  context: context,
+                  dialogContext: dialogContext,
+                  caseType: CaseType.FGM,
+                  icon: Icons.warning_amber_rounded,
+                  color: const Color(0xFFE91E63),
+                  description: 'Female Genital Mutilation',
+                ),
+                const SizedBox(height: 12),
+                _buildCaseTypeOption(
+                  context: context,
+                  dialogContext: dialogContext,
+                  caseType: CaseType.GBV,
+                  icon: Icons.security,
+                  color: const Color(0xFF673AB7),
+                  description: 'Gender-Based Violence',
+                ),
+                const SizedBox(height: 12),
+                _buildCaseTypeOption(
+                  context: context,
+                  dialogContext: dialogContext,
+                  caseType: CaseType.SEXUAL_ASSAULT,
+                  icon: Icons.shield_outlined,
+                  color: const Color(0xFF9C27B0),
+                  description: 'Sexual Assault',
+                ),
+                const SizedBox(height: 20),
+                // Cancel Button
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Build a single case type option in the modal
+  Widget _buildCaseTypeOption({
+    required BuildContext context,
+    required BuildContext dialogContext,
+    required CaseType caseType,
+    required IconData icon,
+    required Color color,
+    required String description,
+  }) {
+    return InkWell(
+      onTap: () {
+        Navigator.of(dialogContext).pop();
+        // Set the selected case type in the global notifier
+        CaseTypeNotifier.instance.value = caseType;
+        print(
+          '🎯 Case type selected: ${caseType.displayName} (${caseType.value})',
+        );
+        print('📢 Notifier value set to: ${CaseTypeNotifier.instance.value}');
+        // Navigate to report tab
+        final tabNav = TabNavigationProvider.of(context);
+        if (tabNav != null) {
+          tabNav.switchToTab(1);
+        }
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    caseType.displayName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, color: color, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// Safety tips data
   static const List<Map<String, String>> _safetyTips = [
     {
       'title': 'Trust Your Instincts',
-      'tip': 'If something feels wrong, trust your gut feeling. Your safety matters most.',
+      'tip':
+          'If something feels wrong, trust your gut feeling. Your safety matters most.',
     },
     {
       'title': 'Know Your Rights',
-      'tip': 'You have the right to say no to any procedure. No one can force you.',
+      'tip':
+          'You have the right to say no to any procedure. No one can force you.',
     },
     {
       'title': 'Find Support',
-      'tip': 'Reach out to trusted friends, family, or counselors. You are not alone.',
+      'tip':
+          'Reach out to trusted friends, family, or counselors. You are not alone.',
     },
     {
       'title': 'Emergency Contacts',
-      'tip': 'Keep emergency numbers saved and easily accessible on your phone.',
+      'tip':
+          'Keep emergency numbers saved and easily accessible on your phone.',
     },
     {
       'title': 'Safe Spaces',
-      'tip': 'Identify safe places and people you can go to if you feel threatened.',
+      'tip':
+          'Identify safe places and people you can go to if you feel threatened.',
     },
   ];
 }
-

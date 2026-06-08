@@ -48,10 +48,7 @@ class EmergencyExitScreen extends StatelessWidget {
               ),
               const Text(
                 'Sunny',
-                style: TextStyle(
-                  fontSize: 20,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 20, color: AppColors.textSecondary),
               ),
               const SizedBox(height: 40),
               // Forecast Section
@@ -88,7 +85,10 @@ class EmergencyExitScreen extends StatelessWidget {
                             color: AppColors.textSecondary,
                           ),
                           SizedBox(height: 8),
-                          Text('20°C', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(
+                            '20°C',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ],
                       ),
                     );

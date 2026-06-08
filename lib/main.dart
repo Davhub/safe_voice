@@ -9,7 +9,7 @@ import 'firebase_options.dart' show DefaultFirebaseOptions;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     // Initialize Firebase, handling duplicate app errors gracefully
     await Firebase.initializeApp(
@@ -23,7 +23,7 @@ void main() async {
       print('Firebase initialization error: $e');
     }
   }
-  
+
   // Initialize offline sync service
   try {
     await EnhancedReportService.startPeriodicSync();
@@ -31,11 +31,9 @@ void main() async {
   } catch (e) {
     print('Failed to initialize offline sync: $e');
   }
-  
+
   runApp(const MyApp());
 }
-
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -51,4 +49,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-

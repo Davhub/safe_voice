@@ -6,11 +6,14 @@ import 'package:safe_voice/services/services.dart';
 import 'package:safe_voice/services/enhanced_report_service.dart';
 import 'package:safe_voice/services/audio_service.dart';
 import 'package:safe_voice/services/native_location_service.dart';
-import 'package:safe_voice/models/report.dart'; // Import for CaseType enum
+import 'package:safe_voice/models/report.dart';
+import 'package:safe_voice/routing/app_router.dart'; // Import for CaseTypeNotifier
 
 class ReportCaseScreen extends StatefulWidget {
   final bool showBack;
-  const ReportCaseScreen({Key? key, this.showBack = true}) : super(key: key);
+  final CaseType? initialCaseType;
+  const ReportCaseScreen({Key? key, this.showBack = true, this.initialCaseType})
+    : super(key: key);
 
   @override
   State<ReportCaseScreen> createState() => _ReportCaseScreenState();
@@ -37,14 +40,51 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialCaseType != null) {
+      _selectedCaseType = widget.initialCaseType!;
+    }
+
+    // Listen to case type changes from the global notifier
+    CaseTypeNotifier.instance.addListener(_onCaseTypeChanged);
+
     _getCurrentLocation();
     _setupTextListener();
     _checkNetworkStatus();
     _loadPendingReportsCount();
   }
 
+  /// Callback when case type changes in the global notifier
+  void _onCaseTypeChanged() {
+    final newCaseType = CaseTypeNotifier.instance.value;
+    if (newCaseType != null && newCaseType != _selectedCaseType) {
+      setState(() {
+        _selectedCaseType = newCaseType;
+      });
+      print(
+        '📋 Case type updated to: ${newCaseType.displayName} (${newCaseType.value})',
+      );
+    }
+  }
+
+  @override
+  void didUpdateWidget(ReportCaseScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update case type when widget is updated with new initialCaseType
+    if (widget.initialCaseType != null &&
+        widget.initialCaseType != oldWidget.initialCaseType) {
+      setState(() {
+        _selectedCaseType = widget.initialCaseType!;
+      });
+      print(
+        '📋 Case type updated via didUpdateWidget to: ${widget.initialCaseType!.displayName}',
+      );
+    }
+  }
+
   @override
   void dispose() {
+    // Remove listener when widget is disposed
+    CaseTypeNotifier.instance.removeListener(_onCaseTypeChanged);
     _reportController.dispose();
     _locationController.dispose();
     super.dispose();
@@ -184,9 +224,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
           }
         });
 
-        _showInfoDialog(
-          '🎤 Recording started. ${AudioService.getPlatformStatusMessage()}',
-        );
+        _showInfoDialog('Recording started. ');
       } else {
         _showErrorDialog(
           'Failed to start recording. Please check microphone permissions.',
@@ -210,7 +248,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
         // Get file size for feedback
         String fileSize = await AudioService.getFileSize(recordingFile.path);
         _showInfoDialog(
-          '✅ Audio recording saved! ($fileSize)\n${AudioService.getPlatformStatusMessage()}\nYou can now submit your voice report.',
+          'Audio recording saved! ($fileSize)\n${AudioService.getPlatformStatusMessage()}\nYou can now submit your voice report.',
         );
       } else {
         _showErrorDialog('Failed to save recording. Please try again.');
@@ -231,7 +269,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
         _recordingPath = null;
         _recordingDuration = Duration.zero;
       });
-      _showInfoDialog('🗑️ Recording cancelled.');
+      _showInfoDialog('Recording cancelled.');
     } catch (e) {
       _showErrorDialog('Error cancelling recording: $e');
     }
@@ -300,6 +338,9 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
       }
 
       print('📍 Location being submitted: $locationToSubmit');
+      print(
+        '📋 Case type being submitted: ${_selectedCaseType.displayName} (${_selectedCaseType.value})',
+      );
 
       // Submit voice report using enhanced service with offline support
       String caseId = await EnhancedReportService.submitVoiceReport(
@@ -316,10 +357,14 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
         setState(() {
           _isSubmittingVoice = false;
           _recordingPath = null;
+          _selectedCaseType = CaseType.FGM; // Reset to default
         });
 
         // Clear location field
         _locationController.clear();
+
+        // Clear the global case type notifier
+        CaseTypeNotifier.instance.value = null;
 
         // Refresh pending reports count
         _loadPendingReportsCount();
@@ -361,6 +406,9 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
       }
 
       print('📍 Location being submitted: $locationToSubmit');
+      print(
+        '📋 Case type being submitted: ${_selectedCaseType.displayName} (${_selectedCaseType.value})',
+      );
 
       // Submit report using enhanced service with offline support
       String caseId = await EnhancedReportService.submitTextReport(
@@ -376,6 +424,12 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
         // Clear the form
         _reportController.clear();
         _locationController.clear();
+        // Reset case type to default after submission
+        setState(() {
+          _selectedCaseType = CaseType.FGM;
+        });
+        // Clear the global case type notifier
+        CaseTypeNotifier.instance.value = null;
       }
     } catch (e) {
       // Show error dialog
@@ -648,9 +702,9 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
               ),
             ),
             const SizedBox(height: 28),
-            // Voice Report Section - Modern card design
+            // Voice Report Section - Single Large Microphone Design
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
                 color: AppColors.card,
                 borderRadius: BorderRadius.circular(24),
@@ -675,197 +729,232 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
               ),
               child: Column(
                 children: [
-                  // Recording icon with animated effect
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient:
-                          _isRecording
-                              ? LinearGradient(
-                                colors: [
-                                  AppColors.error.withOpacity(0.2),
-                                  AppColors.error.withOpacity(0.1),
-                                ],
-                              )
-                              : LinearGradient(
-                                colors: [
-                                  AppColors.primary.withOpacity(0.15),
-                                  AppColors.primary.withOpacity(0.05),
-                                ],
-                              ),
-                    ),
-                    child: Icon(
-                      _isRecording ? Icons.mic : Icons.mic_none_outlined,
-                      size: 64,
-                      color: _isRecording ? AppColors.error : AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    _isRecording
-                        ? 'Recording in Progress'
-                        : _recordingPath != null
-                        ? 'Recording Ready'
-                        : 'Voice Report',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color:
-                          _isRecording
-                              ? AppColors.error
-                              : AppColors.textPrimary,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Status indicator with icons
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          _isRecording
-                              ? AppColors.error.withOpacity(0.1)
-                              : _recordingPath != null
-                              ? AppColors.success.withOpacity(0.1)
-                              : AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                  // Single Large Microphone Icon
+                  if (!_isRecording && _recordingPath == null)
+                    Column(
                       children: [
-                        Icon(
-                          _isRecording
-                              ? Icons.fiber_manual_record
-                              : _recordingPath != null
-                              ? Icons.check_circle_outline
-                              : Icons.info_outline,
-                          size: 16,
-                          color:
-                              _isRecording
-                                  ? AppColors.error
-                                  : _recordingPath != null
-                                  ? AppColors.success
-                                  : AppColors.primary,
+                        GestureDetector(
+                          onTap: _startRecording,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            padding: const EdgeInsets.all(40),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.primary.withOpacity(0.2),
+                                  AppColors.primary.withOpacity(0.1),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.2),
+                                  blurRadius: 20,
+                                  spreadRadius: 5,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.mic_none_outlined,
+                              size: 100,
+                              color: AppColors.primary,
+                            ),
+                          ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(height: 24),
                         Text(
-                          _isRecording
-                              ? '${_recordingDuration.inMinutes}:${(_recordingDuration.inSeconds % 60).toString().padLeft(2, '0')}'
-                              : _recordingPath != null
-                              ? 'Ready to submit'
-                              : 'Tap to record your report',
+                          'Tap to record your report',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Voice reports are secure and anonymous',
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color:
-                                _isRecording
-                                    ? AppColors.error
-                                    : _recordingPath != null
-                                    ? AppColors.success
-                                    : AppColors.primary,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  // Recording Controls with modern button design
-                  if (!_isRecording && _recordingPath == null)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _startRecording,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: AppColors.textOnPrimary,
-                          elevation: 0,
-                          shadowColor: AppColors.primary.withOpacity(0.3),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                  // Recording in Progress
+                  if (_isRecording)
+                    Column(
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 500),
+                          padding: const EdgeInsets.all(40),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.error.withOpacity(0.3),
+                                AppColors.error.withOpacity(0.1),
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.error.withOpacity(0.3),
+                                blurRadius: 30,
+                                spreadRadius: 10,
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.mic,
+                            size: 100,
+                            color: AppColors.error,
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.mic, size: 24),
-                            SizedBox(width: 12),
-                            Text(
-                              'Start Recording',
+                        const SizedBox(height: 24),
+                        Text(
+                          'Recording...',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.error,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.fiber_manual_record,
+                                size: 16,
+                                color: AppColors.error,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${_recordingDuration.inMinutes}:${(_recordingDuration.inSeconds % 60).toString().padLeft(2, '0')}',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.error,
+                                  fontFeatures: [FontFeature.tabularFigures()],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        // Stop Recording Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton.icon(
+                            onPressed: _stopRecording,
+                            icon: const Icon(Icons.stop_rounded, size: 24),
+                            label: const Text(
+                              'Stop Recording',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.5,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  if (_isRecording)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 52,
-                            child: ElevatedButton.icon(
-                              onPressed: _stopRecording,
-                              icon: const Icon(Icons.stop_rounded, size: 22),
-                              label: const Text(
-                                'Stop',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.success,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: SizedBox(
-                            height: 52,
-                            child: OutlinedButton.icon(
-                              onPressed: _cancelRecording,
-                              icon: const Icon(Icons.close_rounded, size: 22),
-                              label: const Text(
-                                'Cancel',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                        const SizedBox(height: 12),
+                        // Cancel Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: OutlinedButton.icon(
+                            onPressed: _cancelRecording,
+                            icon: const Icon(Icons.close_rounded, size: 22),
+                            label: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
                               ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.error,
-                                side: BorderSide(
-                                  color: AppColors.error,
-                                  width: 2,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.error,
+                              side: BorderSide(
+                                color: AppColors.error,
+                                width: 2,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
                               ),
                             ),
                           ),
                         ),
                       ],
                     ),
+                  // Recording Complete - Ready to Submit
                   if (_recordingPath != null && !_isRecording)
                     Column(
                       children: [
+                        Container(
+                          padding: const EdgeInsets.all(40),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.success.withOpacity(0.2),
+                                AppColors.success.withOpacity(0.1),
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.success.withOpacity(0.2),
+                                blurRadius: 20,
+                                spreadRadius: 5,
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.check_circle_outline,
+                            size: 100,
+                            color: AppColors.success,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Recording Complete',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Your voice report is ready to submit',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
                         SizedBox(
                           width: double.infinity,
                           height: 56,
@@ -951,7 +1040,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 25),
             // Modern Divider with gradient
             Row(
               children: [
@@ -988,7 +1077,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 10,
                         letterSpacing: 1,
                       ),
                     ),
@@ -1009,7 +1098,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 25),
             // Text Report Section with modern design
             Container(
               padding: const EdgeInsets.all(24),
@@ -1029,30 +1118,30 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.edit_note_rounded,
-                          color: AppColors.secondary,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Written Report',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ),
+                      // Container(
+                      //   padding: const EdgeInsets.all(10),
+                      //   decoration: BoxDecoration(
+                      //     color: AppColors.secondary.withOpacity(0.1),
+                      //     borderRadius: BorderRadius.circular(12),
+                      //   ),
+                      //   child: Icon(
+                      //     Icons.edit_note_rounded,
+                      //     color: AppColors.secondary,
+                      //     size: 24,
+                      //   ),
+                      // ),
+                      // const SizedBox(width: 12),
+                      // const Expanded(
+                      //   child: Text(
+                      //     'Written Report',
+                      //     style: TextStyle(
+                      //       fontSize: 20,
+                      //       fontWeight: FontWeight.bold,
+                      //       color: AppColors.textPrimary,
+                      //       letterSpacing: -0.5,
+                      //     ),
+                      //   ),
+                      // ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -1063,97 +1152,96 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                       color: AppColors.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 20),
                   // Case Type Selector - NEW
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.category_outlined,
-                            size: 18,
-                            color: AppColors.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Case Type *',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: AppColors.primary.withOpacity(0.2),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: DropdownButtonFormField<CaseType>(
-                          value: _selectedCaseType,
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 4,
-                            ),
-                            prefixIcon: Icon(
-                              Icons.report_problem_outlined,
-                              color: AppColors.primary,
-                              size: 22,
-                            ),
-                          ),
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          dropdownColor: AppColors.card,
-                          isExpanded: true,
-                          items: CaseType.all.map((CaseType caseType) {
-                            return DropdownMenuItem<CaseType>(
-                              value: caseType,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    caseType.displayName,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                  Text(
-                                    caseType.description,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (CaseType? newValue) {
-                            if (newValue != null) {
-                              setState(() {
-                                _selectedCaseType = newValue;
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
+                  // Column(
+                  //   crossAxisAlignment: CrossAxisAlignment.start,
+                  //   children: [
+                  //     Row(
+                  //       children: [
+                  //         Icon(
+                  //           Icons.category_outlined,
+                  //           size: 18,
+                  //           color: AppColors.primary,
+                  //         ),
+                  //         const SizedBox(width: 8),
+                  //         Text(
+                  //           'Case Type *',
+                  //           style: TextStyle(
+                  //             fontSize: 15,
+                  //             fontWeight: FontWeight.w600,
+                  //             color: AppColors.textPrimary,
+                  //           ),
+                  //         ),
+                  //       ],
+                  //     ),
+                  //     const SizedBox(height: 12),
+                  //     Container(
+                  //       decoration: BoxDecoration(
+                  //         color: AppColors.background,
+                  //         borderRadius: BorderRadius.circular(14),
+                  //         border: Border.all(
+                  //           color: AppColors.primary.withOpacity(0.2),
+                  //           width: 1.5,
+                  //         ),
+                  //       ),
+                  //       child: DropdownButtonFormField<CaseType>(
+                  //         value: _selectedCaseType,
+                  //         decoration: InputDecoration(
+                  //           border: InputBorder.none,
+                  //           contentPadding: const EdgeInsets.symmetric(
+                  //             horizontal: 16,
+                  //             vertical: 4,
+                  //           ),
+                  //           prefixIcon: Icon(
+                  //             Icons.report_problem_outlined,
+                  //             color: AppColors.primary,
+                  //             size: 22,
+                  //           ),
+                  //         ),
+                  //         style: TextStyle(
+                  //           fontSize: 15,
+                  //           color: AppColors.textPrimary,
+                  //           fontWeight: FontWeight.w500,
+                  //         ),
+                  //         dropdownColor: AppColors.card,
+                  //         isExpanded: true,
+                  //         items: CaseType.all.map((CaseType caseType) {
+                  //           return DropdownMenuItem<CaseType>(
+                  //             value: caseType,
+                  //             child: Column(
+                  //               crossAxisAlignment: CrossAxisAlignment.start,
+                  //               mainAxisSize: MainAxisSize.min,
+                  //               children: [
+                  //                 Text(
+                  //                   caseType.displayName,
+                  //                   style: TextStyle(
+                  //                     fontWeight: FontWeight.w600,
+                  //                     color: AppColors.textPrimary,
+                  //                   ),
+                  //                 ),
+                  //                 // Text(
+                  //                 //   caseType.description,
+                  //                 //   style: TextStyle(
+                  //                 //     fontSize: 10,
+                  //                 //     color: AppColors.textSecondary,
+                  //                 //   ),
+                  //                 // ),
+                  //               ],
+                  //             ),
+                  //           );
+                  //         }).toList(),
+                  //         onChanged: (CaseType? newValue) {
+                  //           if (newValue != null) {
+                  //             setState(() {
+                  //               _selectedCaseType = newValue;
+                  //             });
+                  //           }
+                  //         },
+                  //       ),
+                  //     ),
+                  //   ],
+                  // ),
+                  const SizedBox(height: 10),
                   // Modern text field
                   Container(
                     decoration: BoxDecoration(
@@ -1166,7 +1254,7 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                     ),
                     child: TextField(
                       controller: _reportController,
-                      maxLines: 8,
+                      maxLines: 4,
                       style: const TextStyle(
                         fontSize: 15,
                         color: AppColors.textPrimary,
@@ -1737,7 +1825,7 @@ class _CaseIDDialogContentState extends State<_CaseIDDialogContent> {
                             AppColors.primary.withOpacity(0.05),
                           ],
                 ),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color:
                       _isCopied
@@ -1753,7 +1841,7 @@ class _CaseIDDialogContentState extends State<_CaseIDDialogContent> {
                     child: Text(
                       widget.caseID,
                       style: TextStyle(
-                        fontSize: 26,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color:
                             _isCopied ? AppColors.success : AppColors.primary,
@@ -1770,32 +1858,32 @@ class _CaseIDDialogContentState extends State<_CaseIDDialogContent> {
                           : Icons.content_copy_rounded,
                       key: ValueKey<bool>(_isCopied),
                       color: _isCopied ? AppColors.success : AppColors.primary,
-                      size: 28,
+                      size: 26,
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           // Info text with icon
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(15),
             decoration: BoxDecoration(
               color:
                   _isCopied
                       ? AppColors.success.withOpacity(0.1)
                       : AppColors.info.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
                 Icon(
                   _isCopied ? Icons.check_circle_outline : Icons.info_outline,
                   color: _isCopied ? AppColors.success : AppColors.info,
-                  size: 20,
+                  size: 14,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     _isCopied
@@ -1803,7 +1891,7 @@ class _CaseIDDialogContentState extends State<_CaseIDDialogContent> {
                         : 'Tap the Case ID above to copy it',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 10,
                       color: _isCopied ? AppColors.success : AppColors.info,
                       fontWeight: _isCopied ? FontWeight.w600 : FontWeight.w500,
                       height: 1.4,

@@ -5,7 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class AdminAuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static final StreamController<bool> _authController = StreamController<bool>.broadcast();
+  static final StreamController<bool> _authController =
+      StreamController<bool>.broadcast();
 
   static Stream<bool> get authStateChanges => _authController.stream;
 
@@ -17,7 +18,8 @@ class AdminAuthService {
         return false;
       }
 
-      DocumentSnapshot adminDoc = await _firestore.collection('admins').doc(user.uid).get();
+      DocumentSnapshot adminDoc =
+          await _firestore.collection('admins').doc(user.uid).get();
       bool isAdminUser = adminDoc.exists;
       _authController.add(isAdminUser);
       return isAdminUser;
@@ -29,7 +31,10 @@ class AdminAuthService {
 
   static Future<String?> adminLogin(String email, String password) async {
     try {
-      UserCredential result = await _auth.signInWithEmailAndPassword(email: email, password: password);
+      UserCredential result = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
       if (result.user != null) {
         bool adminStatus = await isAdmin();
         if (adminStatus) return null;
@@ -57,7 +62,8 @@ class AdminAuthService {
     try {
       User? user = _auth.currentUser;
       if (user == null) return null;
-      DocumentSnapshot doc = await _firestore.collection('admins').doc(user.uid).get();
+      DocumentSnapshot doc =
+          await _firestore.collection('admins').doc(user.uid).get();
       if (!doc.exists) return null;
       Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
       data['uid'] = user.uid;
@@ -77,7 +83,7 @@ class AdminAuthService {
         _authController.add(false);
       }
     });
-    
+
     // Immediately check current user state
     Timer.run(() async {
       User? currentUser = _auth.currentUser;

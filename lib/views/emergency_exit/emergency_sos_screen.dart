@@ -38,7 +38,9 @@ class EmergencySOSScreen extends StatelessWidget {
                   // launchUrl(Uri(scheme: 'tel', path: '911'));
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Calling emergency services... (Functionality to be implemented)'),
+                      content: Text(
+                        'Calling emergency services... (Functionality to be implemented)',
+                      ),
                     ),
                   );
                 },
@@ -91,35 +93,58 @@ class EmergencySOSScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 elevation: 2,
                 child: Column(
                   children: [
                     ListTile(
-                      leading: const Icon(Icons.phone_outlined, color: Color(0xFF2C2C54)),
+                      leading: const Icon(
+                        Icons.phone_outlined,
+                        color: Color(0xFF2C2C54),
+                      ),
                       title: const Text('National Helpline'),
                       subtitle: const Text('1-800-HELPLINE'),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF757575)),
+                      trailing: const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                        color: Color(0xFF757575),
+                      ),
                       onTap: () {
                         // TODO: Implement phone call
                       },
                     ),
                     const Divider(height: 1, indent: 16, endIndent: 16),
                     ListTile(
-                      leading: const Icon(Icons.security, color: Color(0xFF2C2C54)),
+                      leading: const Icon(
+                        Icons.security,
+                        color: Color(0xFF2C2C54),
+                      ),
                       title: const Text('Police'),
                       subtitle: const Text('1-800-POLICE'),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF757575)),
+                      trailing: const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                        color: Color(0xFF757575),
+                      ),
                       onTap: () {
                         // TODO: Implement phone call
                       },
                     ),
                     const Divider(height: 1, indent: 16, endIndent: 16),
                     ListTile(
-                      leading: const Icon(Icons.local_hospital_outlined, color: Color(0xFF2C2C54)),
+                      leading: const Icon(
+                        Icons.local_hospital_outlined,
+                        color: Color(0xFF2C2C54),
+                      ),
                       title: const Text('Medical Services'),
                       subtitle: const Text('1-800-MEDICAL'),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF757575)),
+                      trailing: const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                        color: Color(0xFF757575),
+                      ),
                       onTap: () {
                         // TODO: Implement phone call
                       },

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:safe_voice/routing/route_paths.dart';
 import 'package:safe_voice/views/views.dart';
 import 'package:safe_voice/widgets/widgets.dart';
+import 'package:safe_voice/models/report.dart';
 
 /// Centralized router. Use named navigation throughout the app.
 class AppRouter {
@@ -26,35 +27,41 @@ class AppRouter {
         return _build(
           settings,
           Scaffold(
-            body: Center(
-              child: Text('Route not found: ${settings.name}'),
-            ),
+            body: Center(child: Text('Route not found: ${settings.name}')),
           ),
         );
     }
   }
 
-  static PageRoute _build(RouteSettings s, Widget child) => MaterialPageRoute(settings: s, builder: (_) => child);
+  static PageRoute _build(RouteSettings s, Widget child) =>
+      MaterialPageRoute(settings: s, builder: (_) => child);
 }
 
 /// Navigation controller for tab switching
 class TabNavigationProvider extends InheritedWidget {
   final Function(int) switchToTab;
-  
+
   const TabNavigationProvider({
     Key? key,
     required this.switchToTab,
     required Widget child,
   }) : super(key: key, child: child);
-  
+
   static TabNavigationProvider? of(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<TabNavigationProvider>();
   }
-  
+
   @override
   bool updateShouldNotify(TabNavigationProvider oldWidget) {
     return false;
   }
+}
+
+/// Global case type notifier for passing selected case type to report screen
+class CaseTypeNotifier extends ValueNotifier<CaseType?> {
+  CaseTypeNotifier() : super(null);
+
+  static final CaseTypeNotifier instance = CaseTypeNotifier();
 }
 
 /// Shell widget that hosts bottom navigation and maintains state of tabs.
@@ -93,10 +100,11 @@ class _MainShellState extends State<MainShell> {
         switchToTab: _onTap,
         child: Navigator(
           key: _navigatorKeys[index],
-          onGenerateRoute: (routeSettings) => MaterialPageRoute(
-            builder: (_) => child,
-            settings: routeSettings,
-          ),
+          onGenerateRoute:
+              (routeSettings) => MaterialPageRoute(
+                builder: (_) => child,
+                settings: routeSettings,
+              ),
         ),
       ),
     );
@@ -106,7 +114,8 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        final NavigatorState currentTabNav = _navigatorKeys[_currentIndex].currentState!;
+        final NavigatorState currentTabNav =
+            _navigatorKeys[_currentIndex].currentState!;
         if (currentTabNav.canPop()) {
           currentTabNav.pop();
           return false;
@@ -121,14 +130,26 @@ class _MainShellState extends State<MainShell> {
         body: Stack(
           children: [
             _buildTabNavigator(0, const HomeScreen()),
-            _buildTabNavigator(1, const ReportCaseScreen(showBack: false)),
+            // Use ValueListenableBuilder to rebuild when case type changes
+            ValueListenableBuilder<CaseType?>(
+              valueListenable: CaseTypeNotifier.instance,
+              builder: (context, caseType, _) {
+                print(
+                  '🔄 ValueListenableBuilder rebuilding with case type: ${caseType?.displayName ?? "null"}',
+                );
+                return _buildTabNavigator(
+                  1,
+                  ReportCaseScreen(showBack: false, initialCaseType: caseType),
+                );
+              },
+            ),
             _buildTabNavigator(2, const LearnScreen(showBack: false)),
             _buildTabNavigator(3, const SettingsScreen(showBack: false)),
           ],
         ),
         bottomNavigationBar: CustomNavBar(
           currentIndex: _currentIndex,
-            onTap: _onTap,
+          onTap: _onTap,
         ),
       ),
     );

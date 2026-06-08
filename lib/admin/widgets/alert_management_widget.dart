@@ -11,13 +11,14 @@ class AlertManagementWidget extends StatefulWidget {
   State<AlertManagementWidget> createState() => _AlertManagementWidgetState();
 }
 
-class _AlertManagementWidgetState extends State<AlertManagementWidget> with TickerProviderStateMixin {
+class _AlertManagementWidgetState extends State<AlertManagementWidget>
+    with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedPriority = 'all';
   String _selectedStatus = 'all';
   String _selectedType = 'all';
-  
+
   late AnimationController _refreshAnimationController;
   late Animation<double> _refreshAnimation;
 
@@ -29,7 +30,10 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
       vsync: this,
     );
     _refreshAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _refreshAnimationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+        parent: _refreshAnimationController,
+        curve: Curves.easeInOut,
+      ),
     );
   }
 
@@ -169,10 +173,7 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
               const SizedBox(width: 8),
               const Text(
                 'Filters & Search',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const Spacer(),
               RotationTransition(
@@ -201,15 +202,16 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
                   decoration: InputDecoration(
                     hintText: 'Search by case ID, location, or content...',
                     prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
+                    suffixIcon:
+                        _searchQuery.isNotEmpty
+                            ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                            : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: Colors.grey[300]!),
@@ -219,11 +221,13 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
                       borderSide: BorderSide(color: AppColors.primary),
                     ),
                   ),
-                  onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+                  onChanged:
+                      (value) =>
+                          setState(() => _searchQuery = value.toLowerCase()),
                 ),
               ),
               const SizedBox(width: 16),
-              
+
               // Priority Filter
               _buildFilterDropdown(
                 'Priority',
@@ -232,7 +236,7 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
                 (value) => setState(() => _selectedPriority = value!),
               ),
               const SizedBox(width: 12),
-              
+
               // Status Filter
               _buildFilterDropdown(
                 'Status',
@@ -241,7 +245,7 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
                 (value) => setState(() => _selectedStatus = value!),
               ),
               const SizedBox(width: 12),
-              
+
               // Type Filter
               _buildFilterDropdown(
                 'Type',
@@ -256,7 +260,12 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
     );
   }
 
-  Widget _buildFilterDropdown(String label, String value, List<String> items, ValueChanged<String?> onChanged) {
+  Widget _buildFilterDropdown(
+    String label,
+    String value,
+    List<String> items,
+    ValueChanged<String?> onChanged,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
@@ -267,10 +276,17 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
         child: DropdownButton<String>(
           value: value,
           hint: Text(label),
-          items: items.map((item) => DropdownMenuItem(
-            value: item,
-            child: Text(item == 'all' ? 'All ${label}s' : item.toUpperCase()),
-          )).toList(),
+          items:
+              items
+                  .map(
+                    (item) => DropdownMenuItem(
+                      value: item,
+                      child: Text(
+                        item == 'all' ? 'All ${label}s' : item.toUpperCase(),
+                      ),
+                    ),
+                  )
+                  .toList(),
           onChanged: onChanged,
         ),
       ),
@@ -287,26 +303,81 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
 
         final docs = snapshot.data!.docs;
         final total = docs.length;
-        final highPriority = docs.where((d) => _getReportPriority(d.data() as Map<String, dynamic>) == 'high').length;
-        final pending = docs.where((d) => (d.data() as Map<String, dynamic>)['status'] == 'submitted').length;
-        final today = docs.where((d) => _isToday((d.data() as Map<String, dynamic>)['submittedAt'] as Timestamp?)).length;
+        final highPriority =
+            docs
+                .where(
+                  (d) =>
+                      _getReportPriority(d.data() as Map<String, dynamic>) ==
+                      'high',
+                )
+                .length;
+        final pending =
+            docs
+                .where(
+                  (d) =>
+                      (d.data() as Map<String, dynamic>)['status'] ==
+                      'submitted',
+                )
+                .length;
+        final today =
+            docs
+                .where(
+                  (d) => _isToday(
+                    (d.data() as Map<String, dynamic>)['submittedAt']
+                        as Timestamp?,
+                  ),
+                )
+                .length;
 
         return Row(
           children: [
-            Expanded(child: _buildStatCard('Total Alerts', '$total', Icons.report_rounded, Colors.blue)),
+            Expanded(
+              child: _buildStatCard(
+                'Total Alerts',
+                '$total',
+                Icons.report_rounded,
+                Colors.blue,
+              ),
+            ),
             const SizedBox(width: 16),
-            Expanded(child: _buildStatCard('High Priority', '$highPriority', Icons.priority_high_rounded, Colors.red)),
+            Expanded(
+              child: _buildStatCard(
+                'High Priority',
+                '$highPriority',
+                Icons.priority_high_rounded,
+                Colors.red,
+              ),
+            ),
             const SizedBox(width: 16),
-            Expanded(child: _buildStatCard('Pending Review', '$pending', Icons.pending_actions_rounded, Colors.orange)),
+            Expanded(
+              child: _buildStatCard(
+                'Pending Review',
+                '$pending',
+                Icons.pending_actions_rounded,
+                Colors.orange,
+              ),
+            ),
             const SizedBox(width: 16),
-            Expanded(child: _buildStatCard('Today', '$today', Icons.today_rounded, Colors.green)),
+            Expanded(
+              child: _buildStatCard(
+                'Today',
+                '$today',
+                Icons.today_rounded,
+                Colors.green,
+              ),
+            ),
           ],
         );
       },
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -411,14 +482,15 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
                   ],
                 ),
               ),
-              
+
               // List
               ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 itemCount: docs.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                separatorBuilder:
+                    (context, index) => const SizedBox(height: 12),
                 itemBuilder: (context, index) => _buildAlertCard(docs[index]),
               ),
             ],
@@ -467,7 +539,10 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
               children: [
                 // Priority indicator
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: _getPriorityColor(priority).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
@@ -482,15 +557,18 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
                   ),
                 ),
                 const SizedBox(width: 8),
-                
+
                 // Type chip
                 _buildTypeChip(type),
                 const SizedBox(width: 8),
-                
+
                 // Urgency indicator
                 if (urgency == 'urgent') ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(4),
@@ -513,21 +591,18 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
                   ),
                   const SizedBox(width: 8),
                 ],
-                
+
                 const Spacer(),
-                
+
                 // Time ago
                 Text(
                   _getTimeAgo(submittedAt),
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            
+
             // Case ID and Status
             Row(
               children: [
@@ -543,21 +618,20 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
               ],
             ),
             const SizedBox(height: 8),
-            
+
             // Content preview
             if (content.isNotEmpty) ...[
               Text(
-                content.length > 150 ? '${content.substring(0, 150)}...' : content,
-                style: TextStyle(
-                  color: Colors.grey[700],
-                  fontSize: 14,
-                ),
+                content.length > 150
+                    ? '${content.substring(0, 150)}...'
+                    : content,
+                style: TextStyle(color: Colors.grey[700], fontSize: 14),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 8),
             ],
-            
+
             // Location and actions
             Row(
               children: [
@@ -566,15 +640,12 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
                 Expanded(
                   child: Text(
                     location,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 16),
-                
+
                 // Quick actions
                 Row(
                   children: [
@@ -607,7 +678,11 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
     );
   }
 
-  Widget _buildQuickActionButton(IconData icon, String tooltip, VoidCallback onTap) {
+  Widget _buildQuickActionButton(
+    IconData icon,
+    String tooltip,
+    VoidCallback onTap,
+  ) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),
@@ -628,9 +703,9 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
       'voice': Colors.green,
       'mixed': Colors.purple,
     };
-    
+
     final color = colors[type] ?? Colors.grey;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -650,7 +725,7 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
 
   Widget _buildStatusChip(String status) {
     final color = _getStatusColor(status);
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -727,28 +802,30 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
   List<QueryDocumentSnapshot> _applyFilters(List<QueryDocumentSnapshot> docs) {
     return docs.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
-      
+
       // Search filter
       if (_searchQuery.isNotEmpty) {
-        final searchText = '${doc.id} ${data['content'] ?? ''} ${data['location'] ?? ''}'.toLowerCase();
+        final searchText =
+            '${doc.id} ${data['content'] ?? ''} ${data['location'] ?? ''}'
+                .toLowerCase();
         if (!searchText.contains(_searchQuery)) return false;
       }
-      
+
       // Priority filter
       if (_selectedPriority != 'all') {
         if (_getReportPriority(data) != _selectedPriority) return false;
       }
-      
+
       // Status filter
       if (_selectedStatus != 'all') {
         if ((data['status'] ?? 'submitted') != _selectedStatus) return false;
       }
-      
+
       // Type filter
       if (_selectedType != 'all') {
         if ((data['type'] ?? 'text') != _selectedType) return false;
       }
-      
+
       return true;
     }).toList();
   }
@@ -757,34 +834,53 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
     // Determine priority based on content keywords or other criteria
     final content = (data['content'] ?? '').toLowerCase();
     final keywords = data['keywords'] as List<dynamic>? ?? [];
-    
-    final highPriorityKeywords = ['emergency', 'urgent', 'danger', 'help', 'attack', 'violence', 'assault'];
-    final mediumPriorityKeywords = ['threat', 'harassment', 'unsafe', 'concern', 'suspicious'];
-    
-    if (keywords.any((k) => highPriorityKeywords.contains(k.toString().toLowerCase())) ||
+
+    final highPriorityKeywords = [
+      'emergency',
+      'urgent',
+      'danger',
+      'help',
+      'attack',
+      'violence',
+      'assault',
+    ];
+    final mediumPriorityKeywords = [
+      'threat',
+      'harassment',
+      'unsafe',
+      'concern',
+      'suspicious',
+    ];
+
+    if (keywords.any(
+          (k) => highPriorityKeywords.contains(k.toString().toLowerCase()),
+        ) ||
         highPriorityKeywords.any((k) => content.contains(k))) {
       return 'high';
     }
-    
-    if (keywords.any((k) => mediumPriorityKeywords.contains(k.toString().toLowerCase())) ||
+
+    if (keywords.any(
+          (k) => mediumPriorityKeywords.contains(k.toString().toLowerCase()),
+        ) ||
         mediumPriorityKeywords.any((k) => content.contains(k))) {
       return 'medium';
     }
-    
+
     return 'low';
   }
 
   String _getUrgencyLevel(Map<String, dynamic> data) {
     final submittedAt = data['submittedAt'] as Timestamp?;
     final priority = _getReportPriority(data);
-    
+
     if (priority == 'high' && submittedAt != null) {
-      final hoursSinceSubmission = DateTime.now().difference(submittedAt.toDate()).inHours;
+      final hoursSinceSubmission =
+          DateTime.now().difference(submittedAt.toDate()).inHours;
       if (hoursSinceSubmission < 2) {
         return 'urgent';
       }
     }
-    
+
     return 'normal';
   }
 
@@ -818,11 +914,11 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
 
   String _getTimeAgo(Timestamp? timestamp) {
     if (timestamp == null) return 'Unknown';
-    
+
     final now = DateTime.now();
     final date = timestamp.toDate();
     final difference = now.difference(date);
-    
+
     if (difference.inMinutes < 1) {
       return 'Just now';
     } else if (difference.inHours < 1) {
@@ -840,17 +936,17 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
     if (timestamp == null) return false;
     final now = DateTime.now();
     final date = timestamp.toDate();
-    return now.year == date.year && now.month == date.month && now.day == date.day;
+    return now.year == date.year &&
+        now.month == date.month &&
+        now.day == date.day;
   }
 
   void _openReportDetail(String caseId, Map<String, dynamic> data) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ReportDetailScreen(
-          caseId: caseId,
-          reportData: data,
-        ),
+        builder:
+            (context) => ReportDetailScreen(caseId: caseId, reportData: data),
       ),
     );
   }
@@ -858,31 +954,32 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
   void _showUpdateStatusDialog(String caseId, String currentStatus) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Update Report Status'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Case ID: $caseId'),
-            const SizedBox(height: 16),
-            Text('Current Status: ${currentStatus.toUpperCase()}'),
-            // TODO: Add status update form
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Update Report Status'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Case ID: $caseId'),
+                const SizedBox(height: 16),
+                Text('Current Status: ${currentStatus.toUpperCase()}'),
+                // TODO: Add status update form
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  // TODO: Implement status update
+                  Navigator.pop(context);
+                },
+                child: const Text('Update'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              // TODO: Implement status update
-              Navigator.pop(context);
-            },
-            child: const Text('Update'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -890,7 +987,9 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget> with Tick
     if (audioUrl != null) {
       // TODO: Implement audio playback
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Audio playback functionality will be implemented')),
+        const SnackBar(
+          content: Text('Audio playback functionality will be implemented'),
+        ),
       );
     }
   }

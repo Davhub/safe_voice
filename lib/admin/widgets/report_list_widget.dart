@@ -10,21 +10,23 @@ import 'package:url_launcher/url_launcher.dart';
 class ReportListWidget extends StatefulWidget {
   final String? status;
   const ReportListWidget({super.key, this.status});
-  
+
   @override
   State<ReportListWidget> createState() => _ReportListWidgetState();
 }
 
-class _ReportListWidgetState extends State<ReportListWidget> with TickerProviderStateMixin {
+class _ReportListWidgetState extends State<ReportListWidget>
+    with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedTypeFilter = 'all';
   String _selectedStatusFilter = 'all';
+  String _selectedCaseTypeFilter = 'all'; // NEW: Case type filter
   String _selectedPriorityFilter = 'all';
   String _sortBy = 'date';
   bool _sortAscending = false;
   bool _isGridView = false;
-  
+
   // Pagination state
   int _currentPage = 1;
   final int _reportsPerPage = 20;
@@ -33,7 +35,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
   bool _isLoadingMore = false;
   List<DocumentSnapshot> _allLoadedDocs = [];
   int _totalReportCount = 0;
-  
+
   late AnimationController _refreshAnimationController;
   late Animation<double> _refreshAnimation;
 
@@ -45,14 +47,17 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
       vsync: this,
     );
     _refreshAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _refreshAnimationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+        parent: _refreshAnimationController,
+        curve: Curves.easeInOut,
+      ),
     );
-    
+
     // Set initial status filter if provided
     if (widget.status != null) {
       _selectedStatusFilter = widget.status!;
     }
-    
+
     // Load total count
     _loadTotalCount();
   }
@@ -63,7 +68,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
     _refreshAnimationController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadTotalCount() async {
     final count = await AdminReportService.getTotalReportCount(
       status: _selectedStatusFilter == 'all' ? null : _selectedStatusFilter,
@@ -74,10 +79,10 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
       });
     }
   }
-  
+
   void _loadMore(List<DocumentSnapshot> currentDocs) {
     if (_isLoadingMore || !_hasMore) return;
-    
+
     setState(() {
       _isLoadingMore = true;
       if (currentDocs.isNotEmpty) {
@@ -87,7 +92,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
       _currentPage++;
     });
   }
-  
+
   void _resetPagination() {
     setState(() {
       _currentPage = 1;
@@ -141,11 +146,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(
-              _getStatusIcon(),
-              color: Colors.white,
-              size: 30,
-            ),
+            child: Icon(_getStatusIcon(), color: Colors.white, size: 30),
           ),
           const SizedBox(width: 20),
           Expanded(
@@ -194,7 +195,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                 ),
               ),
               const SizedBox(width: 12),
-              
+
               // View toggle
               Container(
                 decoration: BoxDecoration(
@@ -211,7 +212,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                 ),
               ),
               const SizedBox(width: 12),
-              
+
               // Export button
               Container(
                 decoration: BoxDecoration(
@@ -254,10 +255,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
               const SizedBox(width: 8),
               const Text(
                 'Advanced Search & Filters',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const Spacer(),
               if (_hasActiveFilters())
@@ -265,29 +263,28 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                   onPressed: _clearAllFilters,
                   icon: const Icon(Icons.clear_all, size: 16),
                   label: const Text('Clear All'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
-                  ),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
                 ),
             ],
           ),
           const SizedBox(height: 20),
-          
+
           // Search bar
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
               hintText: 'Search by Case ID, content, location, or keywords...',
               prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                    )
-                  : null,
+              suffixIcon:
+                  _searchQuery.isNotEmpty
+                      ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                      : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.grey[300]!),
@@ -298,13 +295,17 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
               ),
               filled: true,
               fillColor: Colors.grey[50],
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
             ),
-            onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+            onChanged:
+                (value) => setState(() => _searchQuery = value.toLowerCase()),
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Filter row
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -327,7 +328,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                   ),
                 ),
                 const SizedBox(width: 16),
-                
+
                 // Status filter (if not specific to one status)
                 if (widget.status == null) ...[
                   SizedBox(
@@ -340,7 +341,10 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                         {'value': 'submitted', 'label': 'Submitted'},
                         {'value': 'under_review', 'label': 'Under Review'},
                         {'value': 'investigating', 'label': 'Investigating'},
-                        {'value': 'requires_follow_up', 'label': 'Follow-up Required'},
+                        {
+                          'value': 'requires_follow_up',
+                          'label': 'Follow-up Required',
+                        },
                         {'value': 'resolved', 'label': 'Resolved'},
                         {'value': 'closed', 'label': 'Closed'},
                       ],
@@ -350,7 +354,25 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                   ),
                   const SizedBox(width: 16),
                 ],
-                
+
+                // Case Type filter
+                SizedBox(
+                  width: 200,
+                  child: _buildFilterDropdown(
+                    'Case Type',
+                    _selectedCaseTypeFilter,
+                    [
+                      {'value': 'all', 'label': 'All Case Types'},
+                      {'value': 'FGM', 'label': 'FGM'},
+                      {'value': 'SEXUAL_ASSAULT', 'label': 'Sexual Assault'},
+                      {'value': 'GBV', 'label': 'Gender-Based Violence'},
+                    ],
+                    (value) => setState(() => _selectedCaseTypeFilter = value!),
+                    Icons.category_rounded,
+                  ),
+                ),
+                const SizedBox(width: 16),
+
                 // Priority filter
                 SizedBox(
                   width: 200,
@@ -368,7 +390,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                   ),
                 ),
                 const SizedBox(width: 16),
-                
+
                 // Sort options
                 SizedBox(
                   width: 200,
@@ -387,7 +409,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                   ),
                 ),
                 const SizedBox(width: 12),
-                
+
                 // Sort direction
                 Container(
                   decoration: BoxDecoration(
@@ -396,10 +418,13 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                   ),
                   child: IconButton(
                     icon: Icon(
-                      _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                      _sortAscending
+                          ? Icons.arrow_upward
+                          : Icons.arrow_downward,
                       color: AppColors.primary,
                     ),
-                    onPressed: () => setState(() => _sortAscending = !_sortAscending),
+                    onPressed:
+                        () => setState(() => _sortAscending = !_sortAscending),
                     tooltip: _sortAscending ? 'Ascending' : 'Descending',
                   ),
                 ),
@@ -430,12 +455,20 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
           labelText: label,
           prefixIcon: Icon(icon, size: 20, color: Colors.grey[600]),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
         ),
-        items: items.map((item) => DropdownMenuItem(
-          value: item['value'],
-          child: Text(item['label']!),
-        )).toList(),
+        items:
+            items
+                .map(
+                  (item) => DropdownMenuItem(
+                    value: item['value'],
+                    child: Text(item['label']!),
+                  ),
+                )
+                .toList(),
         onChanged: onChanged,
         isExpanded: true,
       ),
@@ -450,11 +483,41 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
 
         final docs = snapshot.data!.docs;
         final total = docs.length;
-        final textReports = docs.where((d) => (d.data() as Map<String, dynamic>)['type'] == 'text').length;
-        final voiceReports = docs.where((d) => (d.data() as Map<String, dynamic>)['type'] == 'voice').length;
-        final pending = docs.where((d) => (d.data() as Map<String, dynamic>)['status'] == 'submitted').length;
-        final resolved = docs.where((d) => (d.data() as Map<String, dynamic>)['status'] == 'resolved').length;
-        final today = docs.where((d) => _isToday(_getTimestamp(d.data() as Map<String, dynamic>))).length;
+        final textReports =
+            docs
+                .where(
+                  (d) => (d.data() as Map<String, dynamic>)['type'] == 'text',
+                )
+                .length;
+        final voiceReports =
+            docs
+                .where(
+                  (d) => (d.data() as Map<String, dynamic>)['type'] == 'voice',
+                )
+                .length;
+        final pending =
+            docs
+                .where(
+                  (d) =>
+                      (d.data() as Map<String, dynamic>)['status'] ==
+                      'submitted',
+                )
+                .length;
+        final resolved =
+            docs
+                .where(
+                  (d) =>
+                      (d.data() as Map<String, dynamic>)['status'] ==
+                      'resolved',
+                )
+                .length;
+        final today =
+            docs
+                .where(
+                  (d) =>
+                      _isToday(_getTimestamp(d.data() as Map<String, dynamic>)),
+                )
+                .length;
 
         return Container(
           padding: const EdgeInsets.all(20),
@@ -478,10 +541,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                   const SizedBox(width: 8),
                   const Text(
                     'Reports Overview',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -490,17 +550,47 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _buildStatCard('Total Reports', '$total', Icons.report, Colors.blue),
+                    _buildStatCard(
+                      'Total Reports',
+                      '$total',
+                      Icons.report,
+                      Colors.blue,
+                    ),
                     const SizedBox(width: 16),
-                    _buildStatCard('Text Reports', '$textReports', Icons.text_fields, Colors.indigo),
+                    _buildStatCard(
+                      'Text Reports',
+                      '$textReports',
+                      Icons.text_fields,
+                      Colors.indigo,
+                    ),
                     const SizedBox(width: 16),
-                    _buildStatCard('Voice Reports', '$voiceReports', Icons.mic, Colors.green),
+                    _buildStatCard(
+                      'Voice Reports',
+                      '$voiceReports',
+                      Icons.mic,
+                      Colors.green,
+                    ),
                     const SizedBox(width: 16),
-                    _buildStatCard('Pending', '$pending', Icons.pending, Colors.orange),
+                    _buildStatCard(
+                      'Pending',
+                      '$pending',
+                      Icons.pending,
+                      Colors.orange,
+                    ),
                     const SizedBox(width: 16),
-                    _buildStatCard('Resolved', '$resolved', Icons.check_circle, Colors.green),
+                    _buildStatCard(
+                      'Resolved',
+                      '$resolved',
+                      Icons.check_circle,
+                      Colors.green,
+                    ),
                     const SizedBox(width: 16),
-                    _buildStatCard('Today', '$today', Icons.today, Colors.purple),
+                    _buildStatCard(
+                      'Today',
+                      '$today',
+                      Icons.today,
+                      Colors.purple,
+                    ),
                   ],
                 ),
               ),
@@ -511,7 +601,12 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       width: 140,
       padding: const EdgeInsets.all(16),
@@ -555,7 +650,8 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: CachedDataService.getReportsStream(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
           return const Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -579,17 +675,21 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
         }
 
         var reports = snapshot.data!;
-        print('ReportListWidget: Received ${reports.length} reports from stream');
-        
+        print(
+          'ReportListWidget: Received ${reports.length} reports from stream',
+        );
+
         if (reports.isEmpty) {
           print('ReportListWidget: Report list is empty');
           return _buildEmptyWidget();
         }
-        
+
         // Apply filters (need to update _applyFilters to work with List<Map>)
         reports = _applyFiltersToMaps(reports);
-        print('ReportListWidget: After applying filters: ${reports.length} reports');
-        
+        print(
+          'ReportListWidget: After applying filters: ${reports.length} reports',
+        );
+
         if (reports.isEmpty) {
           return _buildNoResultsWidget();
         }
@@ -630,15 +730,12 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                     const Spacer(),
                     Text(
                       'Last updated: ${DateTime.now().toString().split('.')[0]}',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
                   ],
                 ),
               ),
-              
+
               // List content
               _isGridView ? _buildGridView(reports) : _buildTableView(reports),
             ],
@@ -653,7 +750,8 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: reports.length,
-      separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey[200]),
+      separatorBuilder:
+          (context, index) => Divider(height: 1, color: Colors.grey[200]),
       itemBuilder: (context, index) => _buildEnhancedTableRow(reports[index]),
     );
   }
@@ -666,7 +764,10 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
     final location = data['location'] ?? 'Not specified';
     final timestamp = _getTimestamp(data);
     final priority = _getReportPriority(data);
-    final hasAudio = data['audioUrl'] != null || data['audio_url'] != null || type == 'voice';
+    final hasAudio =
+        data['audioUrl'] != null ||
+        data['audio_url'] != null ||
+        type == 'voice';
 
     return InkWell(
       onTap: () => _openReportDetail(caseId, data),
@@ -675,10 +776,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border(
-            left: BorderSide(
-              color: _getPriorityColor(priority),
-              width: 4,
-            ),
+            left: BorderSide(color: _getPriorityColor(priority), width: 4),
           ),
         ),
         child: Row(
@@ -692,7 +790,9 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                   Row(
                     children: [
                       Text(
-                        caseId.length > 12 ? '${caseId.substring(0, 12)}...' : caseId,
+                        caseId.length > 12
+                            ? '${caseId.substring(0, 12)}...'
+                            : caseId,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
@@ -700,7 +800,11 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                       ),
                       if (hasAudio) ...[
                         const SizedBox(width: 8),
-                        Icon(Icons.audiotrack, size: 16, color: Colors.green[600]),
+                        Icon(
+                          Icons.audiotrack,
+                          size: 16,
+                          color: Colors.green[600],
+                        ),
                       ],
                     ],
                   ),
@@ -709,7 +813,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                 ],
               ),
             ),
-            
+
             // Status & Priority
             Expanded(
               child: Column(
@@ -721,7 +825,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                 ],
               ),
             ),
-            
+
             // Date & Time
             Expanded(
               child: Column(
@@ -736,15 +840,12 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                   ),
                   Text(
                     _formatTime(timestamp),
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 11),
                   ),
                 ],
               ),
             ),
-            
+
             // Location
             Expanded(
               flex: 2,
@@ -754,32 +855,30 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      location.length > 30 ? '${location.substring(0, 30)}...' : location,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
+                      location.length > 30
+                          ? '${location.substring(0, 30)}...'
+                          : location,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
             ),
-            
+
             // Content Preview
             Expanded(
               flex: 2,
               child: Text(
-                content.length > 40 ? '${content.substring(0, 40)}...' : content,
-                style: TextStyle(
-                  color: Colors.grey[700],
-                  fontSize: 12,
-                ),
+                content.length > 40
+                    ? '${content.substring(0, 40)}...'
+                    : content,
+                style: TextStyle(color: Colors.grey[700], fontSize: 12),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 2,
               ),
             ),
-            
+
             // Actions
             Container(
               width: 120,
@@ -802,12 +901,42 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                   ],
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert, size: 18),
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'view', child: ListTile(leading: Icon(Icons.visibility), title: Text('View Details'), contentPadding: EdgeInsets.zero)),
-                      const PopupMenuItem(value: 'update', child: ListTile(leading: Icon(Icons.edit), title: Text('Update Status'), contentPadding: EdgeInsets.zero)),
-                      if (hasAudio) const PopupMenuItem(value: 'audio', child: ListTile(leading: Icon(Icons.audiotrack), title: Text('Play Audio'), contentPadding: EdgeInsets.zero)),
-                      const PopupMenuItem(value: 'export', child: ListTile(leading: Icon(Icons.download), title: Text('Export'), contentPadding: EdgeInsets.zero)),
-                    ],
+                    itemBuilder:
+                        (context) => [
+                          const PopupMenuItem(
+                            value: 'view',
+                            child: ListTile(
+                              leading: Icon(Icons.visibility),
+                              title: Text('View Details'),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'update',
+                            child: ListTile(
+                              leading: Icon(Icons.edit),
+                              title: Text('Update Status'),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          if (hasAudio)
+                            const PopupMenuItem(
+                              value: 'audio',
+                              child: ListTile(
+                                leading: Icon(Icons.audiotrack),
+                                title: Text('Play Audio'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          const PopupMenuItem(
+                            value: 'export',
+                            child: ListTile(
+                              leading: Icon(Icons.download),
+                              title: Text('Export'),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ],
                     onSelected: (value) => _handleAction(value, caseId, data),
                   ),
                 ],
@@ -841,11 +970,15 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
     final caseId = data['id'] as String;
     final type = data['type'] ?? 'text';
     final status = data['status'] ?? 'submitted';
+    final caseType = data['caseType'] ?? data['case_type'] ?? 'FGM'; // NEW
     final content = data['content'] ?? data['description'] ?? '';
     final location = data['location'] ?? 'Not specified';
     final timestamp = _getTimestamp(data);
     final priority = _getReportPriority(data);
-    final hasAudio = data['audioUrl'] != null || data['audio_url'] != null || type == 'voice';
+    final hasAudio =
+        data['audioUrl'] != null ||
+        data['audio_url'] != null ||
+        type == 'voice';
 
     return InkWell(
       onTap: () => _openReportDetail(caseId, data),
@@ -874,45 +1007,49 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
               children: [
                 Expanded(
                   child: Text(
-                    caseId.length > 10 ? '${caseId.substring(0, 10)}...' : caseId,
+                    caseId.length > 10
+                        ? '${caseId.substring(0, 10)}...'
+                        : caseId,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
                   ),
                 ),
-                if (hasAudio) Icon(Icons.audiotrack, size: 16, color: Colors.green),
+                if (hasAudio)
+                  Icon(Icons.audiotrack, size: 16, color: Colors.green),
               ],
             ),
             const SizedBox(height: 8),
-            
-            // Type and Status
-            Row(
+
+            // Type, Status, and Case Type
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 _buildTypeChip(type),
-                const SizedBox(width: 8),
                 _buildStatusChip(status),
+                _buildCaseTypeChip(caseType), // NEW
               ],
             ),
             const SizedBox(height: 8),
-            
+
             // Priority
             _buildPriorityChip(priority),
             const SizedBox(height: 12),
-            
+
             // Content preview
             Expanded(
               child: Text(
-                content.length > 60 ? '${content.substring(0, 60)}...' : content,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
+                content.length > 60
+                    ? '${content.substring(0, 60)}...'
+                    : content,
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            
+
             // Footer
             Row(
               children: [
@@ -920,19 +1057,15 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    location.length > 15 ? '${location.substring(0, 15)}...' : location,
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 10,
-                    ),
+                    location.length > 15
+                        ? '${location.substring(0, 15)}...'
+                        : location,
+                    style: TextStyle(color: Colors.grey[500], fontSize: 10),
                   ),
                 ),
                 Text(
                   _formatDate(timestamp),
-                  style: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 10,
-                  ),
+                  style: TextStyle(color: Colors.grey[500], fontSize: 10),
                 ),
               ],
             ),
@@ -948,9 +1081,9 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
       'voice': Colors.green,
       'mixed': Colors.purple,
     };
-    
+
     final color = colors[type] ?? Colors.grey;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -970,7 +1103,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
 
   Widget _buildStatusChip(String status) {
     final color = _getStatusColor(status);
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -988,9 +1121,57 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
     );
   }
 
+  Widget _buildCaseTypeChip(String caseType) {
+    // Map case types to colors and display names
+    Color color;
+    String displayName;
+
+    switch (caseType) {
+      case 'FGM':
+        color = const Color(0xFFE91E63);
+        displayName = 'FGM';
+        break;
+      case 'SEXUAL_ASSAULT':
+        color = const Color(0xFF9C27B0);
+        displayName = 'Sexual Assault';
+        break;
+      case 'GBV':
+        color = const Color(0xFF673AB7);
+        displayName = 'GBV';
+        break;
+      default:
+        color = Colors.grey;
+        displayName = caseType;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.category_rounded, size: 10, color: color),
+          const SizedBox(width: 4),
+          Text(
+            displayName,
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPriorityChip(String priority) {
     final color = _getPriorityColor(priority);
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -1026,10 +1207,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
           const SizedBox(height: 12),
           Text(
             'Reports will appear here when submitted by users',
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.grey[500], fontSize: 16),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -1080,10 +1258,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
           const SizedBox(height: 12),
           Text(
             'Try adjusting your search criteria or filters',
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.grey[500], fontSize: 16),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
@@ -1118,10 +1293,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
           const SizedBox(height: 12),
           Text(
             'Please check your connection and try again',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 16),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
@@ -1139,38 +1311,49 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
   }
 
   // Helper methods
-  List<Map<String, dynamic>> _applyFiltersToMaps(List<Map<String, dynamic>> reports) {
+  List<Map<String, dynamic>> _applyFiltersToMaps(
+    List<Map<String, dynamic>> reports,
+  ) {
     return reports.where((data) {
-      // Search filter
-      if (_searchQuery.isNotEmpty) {
-        final searchText = '${data['id'] ?? ''} ${data['content'] ?? ''} ${data['description'] ?? ''} ${data['location'] ?? ''}'.toLowerCase();
-        if (!searchText.contains(_searchQuery)) return false;
-      }
-      
-      // Type filter
-      if (_selectedTypeFilter != 'all') {
-        if ((data['type'] ?? 'text') != _selectedTypeFilter) return false;
-      }
-      
-      // Status filter
-      if (_selectedStatusFilter != 'all') {
-        if ((data['status'] ?? 'submitted') != _selectedStatusFilter) return false;
-      }
-      
-      // Priority filter
-      if (_selectedPriorityFilter != 'all') {
-        final priority = _getReportPriority(data);
-        if (priority != _selectedPriorityFilter) return false;
-      }
-      
-      return true;
-    }).toList()
-    ..sort((a, b) => _sortMaps(a, b));
+        // Search filter
+        if (_searchQuery.isNotEmpty) {
+          final searchText =
+              '${data['id'] ?? ''} ${data['content'] ?? ''} ${data['description'] ?? ''} ${data['location'] ?? ''}'
+                  .toLowerCase();
+          if (!searchText.contains(_searchQuery)) return false;
+        }
+
+        // Type filter
+        if (_selectedTypeFilter != 'all') {
+          if ((data['type'] ?? 'text') != _selectedTypeFilter) return false;
+        }
+
+        // Status filter
+        if (_selectedStatusFilter != 'all') {
+          if ((data['status'] ?? 'submitted') != _selectedStatusFilter)
+            return false;
+        }
+
+        // Case Type filter (NEW)
+        if (_selectedCaseTypeFilter != 'all') {
+          final caseType = data['caseType'] ?? data['case_type'] ?? 'FGM';
+          if (caseType != _selectedCaseTypeFilter) return false;
+        }
+
+        // Priority filter
+        if (_selectedPriorityFilter != 'all') {
+          final priority = _getReportPriority(data);
+          if (priority != _selectedPriorityFilter) return false;
+        }
+
+        return true;
+      }).toList()
+      ..sort((a, b) => _sortMaps(a, b));
   }
 
   int _sortMaps(Map<String, dynamic> a, Map<String, dynamic> b) {
     int comparison = 0;
-    
+
     switch (_sortBy) {
       case 'date':
         final dateA = _getTimestamp(a);
@@ -1189,54 +1372,59 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
         final priorityA = _getReportPriority(a);
         final priorityB = _getReportPriority(b);
         final priorityOrder = {'high': 3, 'medium': 2, 'low': 1};
-        comparison = (priorityOrder[priorityB] ?? 0).compareTo(priorityOrder[priorityA] ?? 0);
+        comparison = (priorityOrder[priorityB] ?? 0).compareTo(
+          priorityOrder[priorityA] ?? 0,
+        );
         break;
       case 'location':
         comparison = (a['location'] ?? '').compareTo(b['location'] ?? '');
         break;
     }
-    
+
     return _sortAscending ? comparison : -comparison;
   }
 
   // Legacy method kept for compatibility (not used anymore)
   List<QueryDocumentSnapshot> _applyFilters(List<QueryDocumentSnapshot> docs) {
     return docs.where((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      
-      // Search filter
-      if (_searchQuery.isNotEmpty) {
-        final searchText = '${doc.id} ${data['content'] ?? ''} ${data['description'] ?? ''} ${data['location'] ?? ''}'.toLowerCase();
-        if (!searchText.contains(_searchQuery)) return false;
-      }
-      
-      // Type filter
-      if (_selectedTypeFilter != 'all') {
-        if ((data['type'] ?? 'text') != _selectedTypeFilter) return false;
-      }
-      
-      // Status filter
-      if (_selectedStatusFilter != 'all') {
-        if ((data['status'] ?? 'submitted') != _selectedStatusFilter) return false;
-      }
-      
-      // Priority filter
-      if (_selectedPriorityFilter != 'all') {
-        final priority = _getReportPriority(data);
-        if (priority != _selectedPriorityFilter) return false;
-      }
-      
-      return true;
-    }).toList()
-    ..sort((a, b) => _sortDocuments(a, b));
+        final data = doc.data() as Map<String, dynamic>;
+
+        // Search filter
+        if (_searchQuery.isNotEmpty) {
+          final searchText =
+              '${doc.id} ${data['content'] ?? ''} ${data['description'] ?? ''} ${data['location'] ?? ''}'
+                  .toLowerCase();
+          if (!searchText.contains(_searchQuery)) return false;
+        }
+
+        // Type filter
+        if (_selectedTypeFilter != 'all') {
+          if ((data['type'] ?? 'text') != _selectedTypeFilter) return false;
+        }
+
+        // Status filter
+        if (_selectedStatusFilter != 'all') {
+          if ((data['status'] ?? 'submitted') != _selectedStatusFilter)
+            return false;
+        }
+
+        // Priority filter
+        if (_selectedPriorityFilter != 'all') {
+          final priority = _getReportPriority(data);
+          if (priority != _selectedPriorityFilter) return false;
+        }
+
+        return true;
+      }).toList()
+      ..sort((a, b) => _sortDocuments(a, b));
   }
 
   int _sortDocuments(QueryDocumentSnapshot a, QueryDocumentSnapshot b) {
     final dataA = a.data() as Map<String, dynamic>;
     final dataB = b.data() as Map<String, dynamic>;
-    
+
     int comparison = 0;
-    
+
     switch (_sortBy) {
       case 'date':
         final dateA = _getTimestamp(dataA);
@@ -1255,102 +1443,160 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
         final priorityA = _getReportPriority(dataA);
         final priorityB = _getReportPriority(dataB);
         final priorityOrder = {'high': 3, 'medium': 2, 'low': 1};
-        comparison = (priorityOrder[priorityB] ?? 0).compareTo(priorityOrder[priorityA] ?? 0);
+        comparison = (priorityOrder[priorityB] ?? 0).compareTo(
+          priorityOrder[priorityA] ?? 0,
+        );
         break;
       case 'location':
-        comparison = (dataA['location'] ?? '').compareTo(dataB['location'] ?? '');
+        comparison = (dataA['location'] ?? '').compareTo(
+          dataB['location'] ?? '',
+        );
         break;
     }
-    
+
     return _sortAscending ? comparison : -comparison;
   }
 
   String _getReportPriority(Map<String, dynamic> data) {
-    final content = (data['content'] ?? data['description'] ?? '').toLowerCase();
+    final content =
+        (data['content'] ?? data['description'] ?? '').toLowerCase();
     final keywords = data['keywords'] as List<dynamic>? ?? [];
-    
-    final highPriorityKeywords = ['emergency', 'urgent', 'danger', 'help', 'attack', 'violence', 'assault', 'weapon'];
-    final mediumPriorityKeywords = ['threat', 'harassment', 'unsafe', 'concern', 'suspicious', 'bullying'];
-    
-    if (keywords.any((k) => highPriorityKeywords.contains(k.toString().toLowerCase())) ||
+
+    final highPriorityKeywords = [
+      'emergency',
+      'urgent',
+      'danger',
+      'help',
+      'attack',
+      'violence',
+      'assault',
+      'weapon',
+    ];
+    final mediumPriorityKeywords = [
+      'threat',
+      'harassment',
+      'unsafe',
+      'concern',
+      'suspicious',
+      'bullying',
+    ];
+
+    if (keywords.any(
+          (k) => highPriorityKeywords.contains(k.toString().toLowerCase()),
+        ) ||
         highPriorityKeywords.any((k) => content.contains(k))) {
       return 'high';
     }
-    
-    if (keywords.any((k) => mediumPriorityKeywords.contains(k.toString().toLowerCase())) ||
+
+    if (keywords.any(
+          (k) => mediumPriorityKeywords.contains(k.toString().toLowerCase()),
+        ) ||
         mediumPriorityKeywords.any((k) => content.contains(k))) {
       return 'medium';
     }
-    
+
     return 'low';
   }
 
   Color _getPriorityColor(String priority) {
     switch (priority) {
-      case 'high': return Colors.red;
-      case 'medium': return Colors.orange;
-      case 'low': return Colors.green;
-      default: return Colors.grey;
+      case 'high':
+        return Colors.red;
+      case 'medium':
+        return Colors.orange;
+      case 'low':
+        return Colors.green;
+      default:
+        return Colors.grey;
     }
   }
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'submitted': return Colors.orange;
-      case 'under_review': return Colors.blue;
-      case 'investigating': return Colors.indigo;
-      case 'requires_follow_up': return Colors.amber;
-      case 'resolved': return Colors.green;
-      case 'closed': return Colors.grey;
-      default: return Colors.grey;
+      case 'submitted':
+        return Colors.orange;
+      case 'under_review':
+        return Colors.blue;
+      case 'investigating':
+        return Colors.indigo;
+      case 'requires_follow_up':
+        return Colors.amber;
+      case 'resolved':
+        return Colors.green;
+      case 'closed':
+        return Colors.grey;
+      default:
+        return Colors.grey;
     }
   }
 
   IconData _getStatusIcon() {
     if (widget.status == null) return Icons.report_rounded;
     switch (widget.status!.toLowerCase()) {
-      case 'submitted': return Icons.pending_actions_rounded;
-      case 'under_review': return Icons.visibility_rounded;
-      case 'investigating': return Icons.search_rounded;
-      case 'requires_follow_up': return Icons.follow_the_signs_rounded;
-      case 'resolved': return Icons.check_circle_rounded;
-      case 'closed': return Icons.archive_rounded;
-      default: return Icons.report_rounded;
+      case 'submitted':
+        return Icons.pending_actions_rounded;
+      case 'under_review':
+        return Icons.visibility_rounded;
+      case 'investigating':
+        return Icons.search_rounded;
+      case 'requires_follow_up':
+        return Icons.follow_the_signs_rounded;
+      case 'resolved':
+        return Icons.check_circle_rounded;
+      case 'closed':
+        return Icons.archive_rounded;
+      default:
+        return Icons.report_rounded;
     }
   }
 
   String _getTitle() {
     if (widget.status == null) return 'All Reports';
     switch (widget.status!.toLowerCase()) {
-      case 'submitted': return 'Pending Reports';
-      case 'under_review': return 'Under Review';
-      case 'investigating': return 'Investigating';
-      case 'requires_follow_up': return 'Follow-up Required';
-      case 'resolved': return 'Resolved Reports';
-      case 'closed': return 'Closed Reports';
-      default: return 'Reports';
+      case 'submitted':
+        return 'Pending Reports';
+      case 'under_review':
+        return 'Under Review';
+      case 'investigating':
+        return 'Investigating';
+      case 'requires_follow_up':
+        return 'Follow-up Required';
+      case 'resolved':
+        return 'Resolved Reports';
+      case 'closed':
+        return 'Closed Reports';
+      default:
+        return 'Reports';
     }
   }
 
   String _getSubtitle() {
-    if (widget.status == null) return 'Comprehensive view of all submitted reports';
+    if (widget.status == null)
+      return 'Comprehensive view of all submitted reports';
     switch (widget.status!.toLowerCase()) {
-      case 'submitted': return 'Reports awaiting initial review and assignment';
-      case 'under_review': return 'Reports currently being evaluated by administrators';
-      case 'investigating': return 'Reports under active investigation';
-      case 'requires_follow_up': return 'Reports requiring additional action or information';
-      case 'resolved': return 'Successfully completed and resolved cases';
-      case 'closed': return 'Archived reports that have been finalized';
-      default: return 'Manage reports efficiently with smart filtering';
+      case 'submitted':
+        return 'Reports awaiting initial review and assignment';
+      case 'under_review':
+        return 'Reports currently being evaluated by administrators';
+      case 'investigating':
+        return 'Reports under active investigation';
+      case 'requires_follow_up':
+        return 'Reports requiring additional action or information';
+      case 'resolved':
+        return 'Successfully completed and resolved cases';
+      case 'closed':
+        return 'Archived reports that have been finalized';
+      default:
+        return 'Manage reports efficiently with smart filtering';
     }
   }
 
   Timestamp? _getTimestamp(Map<String, dynamic> data) {
     // Handle different possible field names
-    return data['submittedAt'] as Timestamp? ?? 
-           data['submitted_at'] as Timestamp? ?? 
-           data['createdAt'] as Timestamp? ?? 
-           data['created_at'] as Timestamp?;
+    return data['submittedAt'] as Timestamp? ??
+        data['submitted_at'] as Timestamp? ??
+        data['createdAt'] as Timestamp? ??
+        data['created_at'] as Timestamp?;
   }
 
   String _formatDate(Timestamp? timestamp) {
@@ -1358,7 +1604,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
     final date = timestamp.toDate();
     final now = DateTime.now();
     final diff = now.difference(date);
-    
+
     if (diff.inDays == 0) {
       return 'Today';
     } else if (diff.inDays == 1) {
@@ -1382,14 +1628,17 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
     if (timestamp == null) return false;
     final now = DateTime.now();
     final date = timestamp.toDate();
-    return now.year == date.year && now.month == date.month && now.day == date.day;
+    return now.year == date.year &&
+        now.month == date.month &&
+        now.day == date.day;
   }
 
   bool _hasActiveFilters() {
     return _searchQuery.isNotEmpty ||
-           _selectedTypeFilter != 'all' ||
-           _selectedStatusFilter != 'all' ||
-           _selectedPriorityFilter != 'all';
+        _selectedTypeFilter != 'all' ||
+        _selectedStatusFilter != 'all' ||
+        _selectedCaseTypeFilter != 'all' ||
+        _selectedPriorityFilter != 'all';
   }
 
   void _clearAllFilters() {
@@ -1398,6 +1647,7 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
       _searchQuery = '';
       _selectedTypeFilter = 'all';
       if (widget.status == null) _selectedStatusFilter = 'all';
+      _selectedCaseTypeFilter = 'all';
       _selectedPriorityFilter = 'all';
       _sortBy = 'date';
       _sortAscending = false;
@@ -1405,14 +1655,26 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
   }
 
   void _openReportDetail(String caseId, Map<String, dynamic> data) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ReportDetailScreen(
-          caseId: caseId,
-          reportData: data,
-        ),
-      ),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => Dialog(
+            insetPadding: const EdgeInsets.all(40),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.9,
+              height: MediaQuery.of(context).size.height * 0.9,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: ReportDetailScreen(
+                caseId: caseId,
+                reportData: data,
+                isDialog: true, // Flag to indicate it's in a dialog
+              ),
+            ),
+          ),
     );
   }
 
@@ -1423,21 +1685,22 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
       // Try to get the proper audio URL
       final caseId = data['caseId'] ?? data['case_id'] ?? data['id'];
       String? downloadUrl;
-      
+
       if (caseId != null) {
         downloadUrl = await AdminReportService.getAudioDownloadUrl(caseId);
       }
-      
+
       final urlToPlay = downloadUrl ?? audioUrl;
-      
+
       // Show audio player dialog
       showDialog(
         context: context,
         barrierDismissible: true,
-        builder: (context) => _AudioPlayerDialog(
-          url: urlToPlay,
-          caseId: caseId?.toString() ?? 'Unknown',
-        ),
+        builder:
+            (context) => _AudioPlayerDialog(
+              url: urlToPlay,
+              caseId: caseId?.toString() ?? 'Unknown',
+            ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1469,95 +1732,105 @@ class _ReportListWidgetState extends State<ReportListWidget> with TickerProvider
   void _showUpdateStatusDialog(String caseId, String currentStatus) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Update Report Status'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Case ID: $caseId'),
-            const SizedBox(height: 16),
-            Text('Current Status: ${currentStatus.toUpperCase()}'),
-            // TODO: Add full status update form
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Update Report Status'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Case ID: $caseId'),
+                const SizedBox(height: 16),
+                Text('Current Status: ${currentStatus.toUpperCase()}'),
+                // TODO: Add full status update form
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _openReportDetail(caseId, {});
+                },
+                child: const Text('Open Details'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _openReportDetail(caseId, {});
-            },
-            child: const Text('Open Details'),
-          ),
-        ],
-      ),
     );
   }
 
   void _showExportDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Export Reports'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Choose export format:'),
-            SizedBox(height: 16),
-            // TODO: Add export options
-            Text('Export functionality will be implemented'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Export Reports'),
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Choose export format:'),
+                SizedBox(height: 16),
+                // TODO: Add export options
+                Text('Export functionality will be implemented'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Export functionality coming soon'),
+                    ),
+                  );
+                },
+                child: const Text('Export'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Export functionality coming soon')),
-              );
-            },
-            child: const Text('Export'),
-          ),
-        ],
-      ),
     );
   }
 
   void _exportSingleReport(String caseId, Map<String, dynamic> data) {
     // TODO: Implement single report export
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Exporting report $caseId...')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Exporting report $caseId...')));
   }
 
   Future<void> _testDatabaseConnection() async {
     print('Testing database connection...');
     try {
       // Test direct Firestore access
-      final snapshot = await FirebaseFirestore.instance.collection('reports').limit(5).get();
+      final snapshot =
+          await FirebaseFirestore.instance.collection('reports').limit(5).get();
       print('Direct Firestore test: Found ${snapshot.docs.length} documents');
-      
+
       for (var doc in snapshot.docs) {
         var data = doc.data();
-        print('Doc ${doc.id}: status=${data['status']}, type=${data['type']}, hasContent=${data['content'] != null}');
+        print(
+          'Doc ${doc.id}: status=${data['status']}, type=${data['type']}, hasContent=${data['content'] != null}',
+        );
       }
-      
+
       // Test through AdminReportService
       final stats = await AdminReportService.getReportsStatistics();
       print('AdminReportService stats: $stats');
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Found ${snapshot.docs.length} reports in database. Check console for details.'),
-            backgroundColor: snapshot.docs.isNotEmpty ? Colors.green : Colors.orange,
+            content: Text(
+              'Found ${snapshot.docs.length} reports in database. Check console for details.',
+            ),
+            backgroundColor:
+                snapshot.docs.isNotEmpty ? Colors.green : Colors.orange,
           ),
         );
       }
@@ -1603,7 +1876,7 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
     try {
       _audioPlayer = html.AudioElement(widget.url);
       _audioPlayer!.preload = 'auto';
-      
+
       // Listen to events
       _audioPlayer!.onLoadedData.listen((_) {
         if (mounted) {
@@ -1612,7 +1885,7 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
           });
         }
       });
-      
+
       _audioPlayer!.onError.listen((error) {
         if (mounted) {
           setState(() {
@@ -1622,25 +1895,25 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
           });
         }
       });
-      
+
       _audioPlayer!.onPlay.listen((_) {
         if (mounted) {
           setState(() => _isPlaying = true);
         }
       });
-      
+
       _audioPlayer!.onPause.listen((_) {
         if (mounted) {
           setState(() => _isPlaying = false);
         }
       });
-      
+
       _audioPlayer!.onEnded.listen((_) {
         if (mounted) {
           setState(() => _isPlaying = false);
         }
       });
-      
+
       // Load the audio
       _audioPlayer!.load();
     } catch (e) {
@@ -1660,7 +1933,7 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
 
   void _togglePlayPause() {
     if (_audioPlayer == null) return;
-    
+
     if (_isPlaying) {
       _audioPlayer!.pause();
     } else {
@@ -1682,7 +1955,10 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
                 const Text('Audio Recording'),
                 Text(
                   'Case: ${widget.caseId}',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.normal,
+                  ),
                 ),
               ],
             ),
@@ -1719,7 +1995,11 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
                     ),
                     child: Column(
                       children: [
-                        const Icon(Icons.warning_amber_rounded, size: 64, color: Colors.orange),
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          size: 64,
+                          color: Colors.orange,
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           _errorMessage ?? 'Test Audio File',
@@ -1740,7 +2020,10 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
                           '• It\'s a mock/test audio file created for development\n'
                           '• It doesn\'t contain actual audio data\n'
                           '• The M4A format may not be fully supported',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                          ),
                         ),
                         const SizedBox(height: 20),
                         const Divider(),
@@ -1754,7 +2037,10 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
                           '1. Enable real audio recording on the user app\n'
                           '2. Test with actual voice recordings\n'
                           '3. Check Firebase Storage for file validity',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                          ),
                         ),
                       ],
                     ),
@@ -1767,7 +2053,10 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
                         onPressed: () async {
                           final Uri uri = Uri.parse(widget.url);
                           if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
                           }
                         },
                         icon: const Icon(Icons.open_in_new, size: 16),
@@ -1854,7 +2143,10 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
                         onPressed: () async {
                           final Uri uri = Uri.parse(widget.url);
                           if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
                           }
                         },
                         icon: const Icon(Icons.download, size: 16),
@@ -1864,7 +2156,10 @@ class _AudioPlayerDialogState extends State<_AudioPlayerDialog> {
                         onPressed: () async {
                           final Uri uri = Uri.parse(widget.url);
                           if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
                           }
                         },
                         icon: const Icon(Icons.open_in_new, size: 16),

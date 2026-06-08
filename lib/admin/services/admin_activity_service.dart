@@ -17,10 +17,8 @@ class AdminActivityService {
   /// Check if activities collection has any data
   static Future<bool> hasActivities() async {
     try {
-      final snapshot = await _firestore
-          .collection('admin_activities')
-          .limit(1)
-          .get();
+      final snapshot =
+          await _firestore.collection('admin_activities').limit(1).get();
       return snapshot.docs.isNotEmpty;
     } catch (e) {
       print('❌ Error checking activities: $e');
@@ -59,7 +57,7 @@ class AdminActivityService {
     try {
       // Use Timestamp.now() instead of serverTimestamp() for immediate visibility
       final now = Timestamp.now();
-      
+
       await _firestore.collection('admin_activities').add({
         'type': type,
         'title': title,
@@ -69,7 +67,7 @@ class AdminActivityService {
         'metadata': metadata ?? {},
         'timestamp': now,
       });
-      
+
       print('✅ Activity logged: $title');
     } catch (e) {
       print('❌ Error logging activity: $e');
@@ -105,7 +103,7 @@ class AdminActivityService {
   /// Format timestamp for display with accurate relative time
   static String formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return 'Unknown';
-    
+
     try {
       final dateTime = timestamp.toDate();
       final now = DateTime.now();
@@ -114,22 +112,22 @@ class AdminActivityService {
       // For very recent times
       if (difference.inSeconds < 60) {
         return 'Just now';
-      } 
+      }
       // For times within the last hour
       else if (difference.inMinutes < 60) {
         final mins = difference.inMinutes;
         return '$mins ${mins == 1 ? 'minute' : 'minutes'} ago';
-      } 
+      }
       // For times within the last 24 hours
       else if (difference.inHours < 24) {
         final hours = difference.inHours;
         return '$hours ${hours == 1 ? 'hour' : 'hours'} ago';
-      } 
+      }
       // For times within the last week
       else if (difference.inDays < 7) {
         final days = difference.inDays;
         return '$days ${days == 1 ? 'day' : 'days'} ago';
-      } 
+      }
       // For times within the last month
       else if (difference.inDays < 30) {
         final weeks = (difference.inDays / 7).floor();
@@ -146,7 +144,10 @@ class AdminActivityService {
   }
 
   /// Create activity log when report is submitted (call this from report submission)
-  static Future<void> logReportSubmission(String reportId, String userId) async {
+  static Future<void> logReportSubmission(
+    String reportId,
+    String userId,
+  ) async {
     await logActivity(
       type: 'report_submitted',
       title: 'New report submitted',
@@ -174,7 +175,10 @@ class AdminActivityService {
   }
 
   /// Create activity log when report is resolved
-  static Future<void> logReportResolution(String reportId, String adminId) async {
+  static Future<void> logReportResolution(
+    String reportId,
+    String adminId,
+  ) async {
     await logActivity(
       type: 'report_resolved',
       title: 'Report resolved',

@@ -10,17 +10,17 @@ import 'package:safe_voice/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   print('🚀 Initializing Admin App...');
-  
+
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   print('✅ Firebase initialized');
-  
+
   // Initialize cache service to prevent redundant fetching on reload
   await SimpleCacheService.initialize();
   print('✅ Cache service initialized - ready to serve cached data on reload!');
-  
+
   runApp(const SafeVoiceAdminApp());
 }
 
@@ -34,7 +34,9 @@ class SafeVoiceAdminApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: AppColors.primary,
-        colorScheme: ColorScheme.fromSwatch().copyWith(primary: AppColors.primary),
+        colorScheme: ColorScheme.fromSwatch().copyWith(
+          primary: AppColors.primary,
+        ),
       ),
       home: const AdminAuthWrapper(),
     );
@@ -57,7 +59,7 @@ class _AdminAuthWrapperState extends State<AdminAuthWrapper> {
   void initState() {
     super.initState();
     AdminAuthService.initialize();
-    
+
     _authSubscription = AdminAuthService.authStateChanges.listen((isAdmin) {
       setState(() {
         _isAdmin = isAdmin;

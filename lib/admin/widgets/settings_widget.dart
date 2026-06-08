@@ -11,7 +11,7 @@ class SettingsWidget extends StatefulWidget {
 
 class _SettingsWidgetState extends State<SettingsWidget> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   // System Settings
   bool _emailNotifications = true;
   bool _pushNotifications = true;
@@ -19,17 +19,17 @@ class _SettingsWidgetState extends State<SettingsWidget> {
   bool _requireApproval = true;
   bool _enableAuditLog = true;
   bool _maintenanceMode = false;
-  
+
   // Security Settings
   bool _twoFactorAuth = false;
   bool _sessionTimeout = true;
   int _sessionTimeoutMinutes = 30;
-  
+
   // Report Settings
   int _autoArchiveDays = 90;
   String _defaultPriority = 'medium';
   bool _allowAnonymousReports = true;
-  
+
   bool _isLoading = true;
 
   @override
@@ -40,7 +40,8 @@ class _SettingsWidgetState extends State<SettingsWidget> {
 
   Future<void> _loadSettings() async {
     try {
-      final doc = await _firestore.collection('admin_settings').doc('system').get();
+      final doc =
+          await _firestore.collection('admin_settings').doc('system').get();
       if (doc.exists) {
         final data = doc.data()!;
         setState(() {
@@ -82,7 +83,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
         'allowAnonymousReports': _allowAnonymousReports,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -115,7 +116,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
         children: [
           _buildHeader(),
           const SizedBox(height: 24),
-          
+
           // Settings sections
           _buildGeneralSettings(),
           const SizedBox(height: 24),
@@ -129,7 +130,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
           const SizedBox(height: 24),
           _buildDangerZone(),
           const SizedBox(height: 24),
-          
+
           // Save button
           _buildSaveButton(),
           const SizedBox(height: 50),
@@ -140,9 +141,9 @@ class _SettingsWidgetState extends State<SettingsWidget> {
 
   Widget _buildHeader() {
     return Container(
-      padding:  EdgeInsets.all(24),
+      padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
-      color: AppColors.primary,
+        color: AppColors.primary,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -183,10 +184,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                 SizedBox(height: 8),
                 Text(
                   'Configure system preferences and security options',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
                 ),
               ],
             ),
@@ -265,7 +263,10 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                     max: 120,
                     divisions: 23,
                     label: '$_sessionTimeoutMinutes minutes',
-                    onChanged: (value) => setState(() => _sessionTimeoutMinutes = value.toInt()),
+                    onChanged:
+                        (value) => setState(
+                          () => _sessionTimeoutMinutes = value.toInt(),
+                        ),
                   ),
                 ),
                 Text('$_sessionTimeoutMinutes min'),
@@ -309,7 +310,10 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                 value: _defaultPriority,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'low', child: Text('Low')),
@@ -348,10 +352,15 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     suffixText: 'days',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
                   keyboardType: TextInputType.number,
-                  controller: TextEditingController(text: _autoArchiveDays.toString()),
+                  controller: TextEditingController(
+                    text: _autoArchiveDays.toString(),
+                  ),
                   onChanged: (value) {
                     final days = int.tryParse(value);
                     if (days != null && days > 0) {
@@ -487,7 +496,9 @@ class _SettingsWidgetState extends State<SettingsWidget> {
           ListTile(
             leading: const Icon(Icons.delete_forever, color: Colors.red),
             title: const Text('Clear All Data'),
-            subtitle: const Text('Permanently delete all reports and user data'),
+            subtitle: const Text(
+              'Permanently delete all reports and user data',
+            ),
             trailing: ElevatedButton(
               onPressed: () => _showClearDataDialog(),
               style: ElevatedButton.styleFrom(
@@ -585,7 +596,12 @@ class _SettingsWidgetState extends State<SettingsWidget> {
     );
   }
 
-  Widget _buildSwitchTile(String title, String subtitle, bool value, ValueChanged<bool> onChanged) {
+  Widget _buildSwitchTile(
+    String title,
+    String subtitle,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
     return SwitchListTile(
       title: Text(title),
       subtitle: Text(subtitle),
@@ -595,7 +611,12 @@ class _SettingsWidgetState extends State<SettingsWidget> {
     );
   }
 
-  Widget _buildInfoTile(String title, String subtitle, IconData icon, Color color) {
+  Widget _buildInfoTile(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+  ) {
     return ListTile(
       leading: Icon(icon, color: color),
       title: Text(title),
@@ -607,116 +628,124 @@ class _SettingsWidgetState extends State<SettingsWidget> {
   void _showClearCacheDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear Cache'),
-        content: const Text('Are you sure you want to clear the system cache? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Clear Cache'),
+            content: const Text(
+              'Are you sure you want to clear the system cache? This action cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  // Implement cache clearing
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Cache cleared successfully')),
+                  );
+                },
+                child: const Text('Clear'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              // Implement cache clearing
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cache cleared successfully')),
-              );
-            },
-            child: const Text('Clear'),
-          ),
-        ],
-      ),
     );
   }
 
   void _showBackupDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Database Backup'),
-        content: const Text('Create a backup of the current database?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Database Backup'),
+            content: const Text('Create a backup of the current database?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  // Implement backup
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Backup created successfully'),
+                    ),
+                  );
+                },
+                child: const Text('Backup'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              // Implement backup
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Backup created successfully')),
-              );
-            },
-            child: const Text('Backup'),
-          ),
-        ],
-      ),
     );
   }
 
   void _showClearDataDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear All Data'),
-        content: const Text(
-          'WARNING: This will permanently delete all reports and user data. This action cannot be undone!\n\nType "DELETE" to confirm.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Clear All Data'),
+            content: const Text(
+              'WARNING: This will permanently delete all reports and user data. This action cannot be undone!\n\nType "DELETE" to confirm.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  // Require confirmation
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              // Require confirmation
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
     );
   }
 
   void _showResetDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset Settings'),
-        content: const Text('Reset all settings to their default values?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Reset Settings'),
+            content: const Text('Reset all settings to their default values?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  // Reset to defaults
+                  setState(() {
+                    _emailNotifications = true;
+                    _pushNotifications = true;
+                    _autoAssignReports = false;
+                    _requireApproval = true;
+                    _enableAuditLog = true;
+                    _maintenanceMode = false;
+                    _twoFactorAuth = false;
+                    _sessionTimeout = true;
+                    _sessionTimeoutMinutes = 30;
+                    _autoArchiveDays = 90;
+                    _defaultPriority = 'medium';
+                    _allowAnonymousReports = true;
+                  });
+                  Navigator.pop(context);
+                  _saveSettings();
+                },
+                child: const Text('Reset'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              // Reset to defaults
-              setState(() {
-                _emailNotifications = true;
-                _pushNotifications = true;
-                _autoAssignReports = false;
-                _requireApproval = true;
-                _enableAuditLog = true;
-                _maintenanceMode = false;
-                _twoFactorAuth = false;
-                _sessionTimeout = true;
-                _sessionTimeoutMinutes = 30;
-                _autoArchiveDays = 90;
-                _defaultPriority = 'medium';
-                _allowAnonymousReports = true;
-              });
-              Navigator.pop(context);
-              _saveSettings();
-            },
-            child: const Text('Reset'),
-          ),
-        ],
-      ),
     );
   }
 }

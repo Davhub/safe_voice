@@ -7,8 +7,9 @@ class TestReportService {
   /// Create a test report for status checking
   static Future<String> createTestReport() async {
     try {
-      String testCaseId = 'SVTEST${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}';
-      
+      String testCaseId =
+          'SVTEST${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}';
+
       Map<String, dynamic> testReport = {
         'caseId': testCaseId,
         'type': 'text',
@@ -17,13 +18,11 @@ class TestReportService {
         'status': 'submitted',
         'submittedAt': FieldValue.serverTimestamp(),
         'lastUpdated': FieldValue.serverTimestamp(),
-        'statusMessage': 'Your test report has been received and is being processed',
+        'statusMessage':
+            'Your test report has been received and is being processed',
       };
 
-      await _firestore
-          .collection('reports')
-          .doc(testCaseId)
-          .set(testReport);
+      await _firestore.collection('reports').doc(testCaseId).set(testReport);
 
       print('✅ Test report created with Case ID: $testCaseId');
       return testCaseId;
@@ -34,7 +33,11 @@ class TestReportService {
   }
 
   /// Update test report status (simulates admin action)
-  static Future<void> updateTestReportStatus(String caseId, String newStatus, {String? statusMessage}) async {
+  static Future<void> updateTestReportStatus(
+    String caseId,
+    String newStatus, {
+    String? statusMessage,
+  }) async {
     try {
       Map<String, dynamic> updateData = {
         'status': newStatus,
@@ -45,10 +48,7 @@ class TestReportService {
         updateData['statusMessage'] = statusMessage;
       }
 
-      await _firestore
-          .collection('reports')
-          .doc(caseId)
-          .update(updateData);
+      await _firestore.collection('reports').doc(caseId).update(updateData);
 
       print('✅ Test report status updated: $caseId -> $newStatus');
     } catch (e) {
@@ -60,10 +60,7 @@ class TestReportService {
   /// Delete test report
   static Future<void> deleteTestReport(String caseId) async {
     try {
-      await _firestore
-          .collection('reports')
-          .doc(caseId)
-          .delete();
+      await _firestore.collection('reports').doc(caseId).delete();
 
       print('✅ Test report deleted: $caseId');
     } catch (e) {

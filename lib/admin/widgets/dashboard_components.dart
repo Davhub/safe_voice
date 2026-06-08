@@ -34,7 +34,7 @@ class DashboardHeader extends StatelessWidget {
         //   ),
         // ),
         // const SizedBox(width: 20),
-        
+
         // Notifications
         // Container(
         //   width: 45,
@@ -64,18 +64,51 @@ class MetricCardsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _buildMetricCard('Total Users', '1,234', Icons.people, Colors.blue)),
+        Expanded(
+          child: _buildMetricCard(
+            'Total Users',
+            '1,234',
+            Icons.people,
+            Colors.blue,
+          ),
+        ),
         const SizedBox(width: 20),
-        Expanded(child: _buildMetricCard('Active Alerts', '23', Icons.warning, Colors.orange)),
+        Expanded(
+          child: _buildMetricCard(
+            'Active Alerts',
+            '23',
+            Icons.warning,
+            Colors.orange,
+          ),
+        ),
         const SizedBox(width: 20),
-        Expanded(child: _buildMetricCard('Reports Today', '45', Icons.report, Colors.green)),
+        Expanded(
+          child: _buildMetricCard(
+            'Reports Today',
+            '45',
+            Icons.report,
+            Colors.green,
+          ),
+        ),
         const SizedBox(width: 20),
-        Expanded(child: _buildMetricCard('Response Time', '2.3m', Icons.timer, Colors.purple)),
+        Expanded(
+          child: _buildMetricCard(
+            'Response Time',
+            '2.3m',
+            Icons.timer,
+            Colors.purple,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
+  Widget _buildMetricCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -96,7 +129,13 @@ class MetricCardsRow extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Icon(icon, color: color, size: 24),
-              Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
