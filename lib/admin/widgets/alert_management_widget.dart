@@ -942,12 +942,28 @@ class _AlertManagementWidgetState extends State<AlertManagementWidget>
   }
 
   void _openReportDetail(String caseId, Map<String, dynamic> data) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder:
-            (context) => ReportDetailScreen(caseId: caseId, reportData: data),
-      ),
+    // showDialog (not Navigator.push) so the sidebar stays visible,
+    // consistent with every other entry point into ReportDetailScreen.
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => Dialog(
+            insetPadding: const EdgeInsets.all(40),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.9,
+              height: MediaQuery.of(context).size.height * 0.9,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: ReportDetailScreen(
+                caseId: caseId,
+                reportData: data,
+                isDialog: true,
+              ),
+            ),
+          ),
     );
   }
 

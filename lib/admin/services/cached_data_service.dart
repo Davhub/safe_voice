@@ -21,6 +21,7 @@ class CachedDataService {
   static StreamSubscription? _reportsSubscription;
   static StreamSubscription? _notificationsSubscription;
   static StreamSubscription? _activitiesSubscription;
+  static Timer? _statisticsRefreshTimer;
 
   /// Get reports stream with caching
   /// 1. Immediately return cached data if available
@@ -205,8 +206,14 @@ class CachedDataService {
     // Then fetch fresh statistics (use Future, not stream for count queries)
     _fetchFreshStatistics();
 
-    // Set up periodic refresh (every 30 seconds)
-    Timer.periodic(const Duration(seconds: 30), (timer) {
+    // Set up periodic refresh (every 30 seconds). Cancel any previous timer
+    // first — this is called again every time the Overview tab remounts,
+    // and without cancelling, each call would leak another timer polling
+    // Firestore forever.
+    _statisticsRefreshTimer?.cancel();
+    _statisticsRefreshTimer = Timer.periodic(const Duration(seconds: 30), (
+      timer,
+    ) {
       _fetchFreshStatistics();
     });
 
@@ -311,6 +318,7 @@ class CachedDataService {
     _reportsSubscription?.cancel();
     _notificationsSubscription?.cancel();
     _activitiesSubscription?.cancel();
+    _statisticsRefreshTimer?.cancel();
 
     _reportsController.close();
     _notificationsController.close();

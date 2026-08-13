@@ -24,10 +24,11 @@ class OnboardingScreen extends StatelessWidget {
                     MediaQuery.of(context).padding.bottom,
               ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       Image.asset(
                         'assets/pngs/Logo.png',
@@ -78,11 +79,14 @@ class OnboardingScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+
+                  const SizedBox(height: 280),
                   Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       SizedBox(
                         width: double.infinity,
-                        height: 56,
+                        height: 60 ,
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.pushReplacementNamed(

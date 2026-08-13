@@ -381,6 +381,7 @@ class _ReportListWidgetState extends State<ReportListWidget>
                     _selectedPriorityFilter,
                     [
                       {'value': 'all', 'label': 'All Priorities'},
+                      {'value': 'critical', 'label': 'Critical Priority'},
                       {'value': 'high', 'label': 'High Priority'},
                       {'value': 'medium', 'label': 'Medium Priority'},
                       {'value': 'low', 'label': 'Low Priority'},
@@ -1371,7 +1372,12 @@ class _ReportListWidgetState extends State<ReportListWidget>
       case 'priority':
         final priorityA = _getReportPriority(a);
         final priorityB = _getReportPriority(b);
-        final priorityOrder = {'high': 3, 'medium': 2, 'low': 1};
+        final priorityOrder = {
+          'critical': 4,
+          'high': 3,
+          'medium': 2,
+          'low': 1,
+        };
         comparison = (priorityOrder[priorityB] ?? 0).compareTo(
           priorityOrder[priorityA] ?? 0,
         );
@@ -1442,7 +1448,12 @@ class _ReportListWidgetState extends State<ReportListWidget>
       case 'priority':
         final priorityA = _getReportPriority(dataA);
         final priorityB = _getReportPriority(dataB);
-        final priorityOrder = {'high': 3, 'medium': 2, 'low': 1};
+        final priorityOrder = {
+          'critical': 4,
+          'high': 3,
+          'medium': 2,
+          'low': 1,
+        };
         comparison = (priorityOrder[priorityB] ?? 0).compareTo(
           priorityOrder[priorityA] ?? 0,
         );
@@ -1457,55 +1468,23 @@ class _ReportListWidgetState extends State<ReportListWidget>
     return _sortAscending ? comparison : -comparison;
   }
 
+  /// Reads the urgency level the classifier assigned at submission time
+  /// (report_service.dart's classifyUrgency), rather than re-deriving it
+  /// from a separate, much narrower keyword list.
   String _getReportPriority(Map<String, dynamic> data) {
-    final content =
-        (data['content'] ?? data['description'] ?? '').toLowerCase();
-    final keywords = data['keywords'] as List<dynamic>? ?? [];
-
-    final highPriorityKeywords = [
-      'emergency',
-      'urgent',
-      'danger',
-      'help',
-      'attack',
-      'violence',
-      'assault',
-      'weapon',
-    ];
-    final mediumPriorityKeywords = [
-      'threat',
-      'harassment',
-      'unsafe',
-      'concern',
-      'suspicious',
-      'bullying',
-    ];
-
-    if (keywords.any(
-          (k) => highPriorityKeywords.contains(k.toString().toLowerCase()),
-        ) ||
-        highPriorityKeywords.any((k) => content.contains(k))) {
-      return 'high';
-    }
-
-    if (keywords.any(
-          (k) => mediumPriorityKeywords.contains(k.toString().toLowerCase()),
-        ) ||
-        mediumPriorityKeywords.any((k) => content.contains(k))) {
-      return 'medium';
-    }
-
-    return 'low';
+    return (data['urgency'] as String? ?? 'LOW').toLowerCase();
   }
 
   Color _getPriorityColor(String priority) {
     switch (priority) {
+      case 'critical':
+        return Colors.red.shade700;
       case 'high':
-        return Colors.red;
+        return Colors.orange.shade700;
       case 'medium':
-        return Colors.orange;
+        return Colors.amber.shade600;
       case 'low':
-        return Colors.green;
+        return Colors.teal.shade600;
       default:
         return Colors.grey;
     }

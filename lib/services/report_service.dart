@@ -60,14 +60,25 @@ class ReportService {
       // Save to Firestore
       await _firestore.collection('reports').doc(caseId).set(reportData);
 
-      await NotificationGatewayService.queueReportAlert(
-        caseId: caseId,
-        reportType: 'text',
-        urgency: urgency,
-        location: location,
-        status: 'submitted',
-        reportData: reportData,
-      );
+      // The report is already saved at this point — a failure queueing the
+      // notification-gateway request must never make the caller (and then
+      // EnhancedReportService's offline-retry logic) think submission
+      // itself failed, or it'll retry with a brand-new case ID and create
+      // a second real report the reporter never sees the ID for.
+      try {
+        await NotificationGatewayService.queueReportAlert(
+          caseId: caseId,
+          reportType: 'text',
+          urgency: urgency,
+          location: location,
+          status: 'submitted',
+          reportData: reportData,
+        );
+      } catch (gatewayError) {
+        print(
+          '⚠️ Failed to queue notification gateway alert (non-critical): $gatewayError',
+        );
+      }
 
       // Create admin notification
       try {
@@ -150,14 +161,25 @@ class ReportService {
       // Save to Firestore
       await _firestore.collection('reports').doc(caseId).set(reportData);
 
-      await NotificationGatewayService.queueReportAlert(
-        caseId: caseId,
-        reportType: 'voice',
-        urgency: urgency,
-        location: location,
-        status: 'submitted',
-        reportData: reportData,
-      );
+      // The report is already saved at this point — a failure queueing the
+      // notification-gateway request must never make the caller (and then
+      // EnhancedReportService's offline-retry logic) think submission
+      // itself failed, or it'll retry with a brand-new case ID and create
+      // a second real report the reporter never sees the ID for.
+      try {
+        await NotificationGatewayService.queueReportAlert(
+          caseId: caseId,
+          reportType: 'voice',
+          urgency: urgency,
+          location: location,
+          status: 'submitted',
+          reportData: reportData,
+        );
+      } catch (gatewayError) {
+        print(
+          '⚠️ Failed to queue notification gateway alert (non-critical): $gatewayError',
+        );
+      }
 
       // Create admin notification
       try {
@@ -223,7 +245,7 @@ class ReportService {
   static Future<Map<String, dynamic>?> getReportStatus(String caseId) async {
     try {
       DocumentSnapshot doc =
-          await _firestore.collection('reports').doc(caseId).get();
+          await _firestore.collection('report_status').doc(caseId).get();
 
       if (doc.exists) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;

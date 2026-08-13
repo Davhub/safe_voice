@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:safe_voice/admin/services/simple_cache_service.dart';
 
 class AdminAuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -52,6 +53,10 @@ class AdminAuthService {
   static Future<void> adminLogout() async {
     try {
       await _auth.signOut();
+      // Cached report data (survivor testimony, location, audio URLs) is
+      // stored in browser localStorage — it must not outlive the session on
+      // a shared or public machine.
+      await SimpleCacheService.clearAll();
       _authController.add(false);
     } catch (e) {
       // Empty catch block

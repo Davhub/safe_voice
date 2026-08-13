@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:safe_voice/admin/services/admin_report_service.dart';
@@ -22,6 +23,9 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget>
   bool _analyticsLoading = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  StreamSubscription<Map<String, int>>? _statsSubscription;
+  StreamSubscription<QuerySnapshot>? _liveReportsSubscription;
+  bool _liveListenerReady = false;
 
   // Analytics state
   String _selectedPeriod =
@@ -42,17 +46,44 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget>
     );
     _loadData();
     _loadAnalytics();
+    _watchForNewReports();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _statsSubscription?.cancel();
+    _liveReportsSubscription?.cancel();
     super.dispose();
+  }
+
+  /// The case-type/status/location breakdown below is a one-shot fetch
+  /// per period, not a live stream (Firestore count()/aggregation queries
+  /// don't have a snapshots() equivalent). Watching the most recent report
+  /// and re-running the analytics fetch whenever it changes keeps the
+  /// breakdown current without polling the whole collection.
+  void _watchForNewReports() {
+    _liveReportsSubscription = FirebaseFirestore.instance
+        .collection('reports')
+        .orderBy('submittedAt', descending: true)
+        .limit(1)
+        .snapshots()
+        .listen((snapshot) {
+          if (!_liveListenerReady) {
+            // Skip the initial emission — it's the current state, not a
+            // new report arriving.
+            _liveListenerReady = true;
+            return;
+          }
+          _loadAnalytics();
+        });
   }
 
   Future<void> _loadData() async {
     // Use cached statistics stream instead of Future
-    CachedDataService.getStatisticsStream().listen((stats) {
+    _statsSubscription = CachedDataService.getStatisticsStream().listen((
+      stats,
+    ) {
       if (mounted) {
         setState(() {
           _stats = stats;
@@ -133,8 +164,10 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget>
             _buildEnhancedStatsCards(),
             const SizedBox(height: 32),
 
-            // Analytics visualizations
-            if (!_analyticsLoading && _analyticsData != null) ...[
+            // Analytics visualizations — keep showing the last loaded data
+            // during a period-switch refresh instead of the whole section
+            // disappearing and reappearing on every click.
+            if (_analyticsData != null) ...[
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -183,6 +216,15 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget>
                   ),
                 ),
                 const SizedBox(width: 16),
+                if (_analyticsLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 12),
+                    child: SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
                 ...['Today', 'Week', 'Month', 'All Time', 'Custom'].map(
                   (period) => Padding(
                     padding: const EdgeInsets.only(right: 8.0),
@@ -268,8 +310,13 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget>
   }
 
   Widget _buildEnhancedStatsCards() {
-    if (_analyticsLoading || _analyticsData == null) {
-      return _buildStatsCards(); // Show basic stats while loading
+    // Only fall back to the basic stats layout before analytics has ever
+    // loaded. Once loaded, keep showing the last known data while a period
+    // switch refreshes in the background — swapping to a completely
+    // different card layout (different colors, different metrics) on every
+    // click reads as a glitch.
+    if (_analyticsData == null) {
+      return _buildStatsCards();
     }
 
     final caseTypeCounts =
@@ -284,11 +331,17 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget>
       (sum, count) => sum + (count as int? ?? 0),
     );
     final resolvedCount = statusCounts['resolved'] as int? ?? 0;
-    final pendingCount =
-        (statusCounts['submitted'] as int? ?? 0) +
-        (statusCounts['under_review'] as int? ?? 0);
+    final closedCount = statusCounts['closed'] as int? ?? 0;
+    // Anything not yet resolved/closed counts as pending — covers
+    // submitted, under_review, investigating, requires_follow_up,
+    // acknowledged, escalated, and any other in-progress status, rather
+    // than only the two statuses explicitly named here.
+    final pendingCount = totalReports - resolvedCount - closedCount;
 
-    final percentageChange = comparison['percentageChange'] as double? ?? 0.0;
+    // Null (rather than defaulting to 0.0) when there's no comparison data
+    // — e.g. "All Time" has no meaningful "previous period" — so the trend
+    // badge is hidden instead of showing a misleading "0.0%".
+    final percentageChange = comparison['percentageChange'] as double?;
     final isIncrease = comparison['isIncrease'] as bool? ?? false;
 
     final stats = [
@@ -824,9 +877,22 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget>
         _analyticsData?['statusCounts'] as Map<String, dynamic>? ?? {};
 
     final submitted = statusCounts['submitted'] as int? ?? 0;
-    final underReview = statusCounts['under_review'] as int? ?? 0;
-    final resolved = statusCounts['resolved'] as int? ?? 0;
-    final total = submitted + underReview + resolved;
+    // Everything actively being worked but not yet finished.
+    final inProgress =
+        (statusCounts['under_review'] as int? ?? 0) +
+        (statusCounts['investigating'] as int? ?? 0) +
+        (statusCounts['requires_follow_up'] as int? ?? 0) +
+        (statusCounts['acknowledged'] as int? ?? 0) +
+        (statusCounts['escalated'] as int? ?? 0);
+    final resolved =
+        (statusCounts['resolved'] as int? ?? 0) +
+        (statusCounts['closed'] as int? ?? 0);
+    // Sum every status present, not just the three named buckets above, so
+    // the percentages always add up to the true total.
+    final total = statusCounts.values.fold<int>(
+      0,
+      (sum, count) => sum + (count as int? ?? 0),
+    );
 
     return Card(
       elevation: 0,
@@ -867,8 +933,8 @@ class _DashboardStatsWidgetState extends State<DashboardStatsWidget>
                   ),
                   const SizedBox(height: 16),
                   _buildStatusBar(
-                    label: 'Under Review',
-                    count: underReview,
+                    label: 'In Progress',
+                    count: inProgress,
                     total: total,
                     color: Colors.orange,
                   ),

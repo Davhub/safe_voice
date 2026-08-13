@@ -267,34 +267,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen>
                                         ),
                               ),
                             ),
-                            const SizedBox(height: 16),
-
-                            // Quick access hint
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.info_outline,
-                                    color: Colors.blue[700],
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Demo: admin@safevoice.com / admin123',
-                                    style: TextStyle(
-                                      color: Colors.blue[700],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ],
                         ),
                       ),

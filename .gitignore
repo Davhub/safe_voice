@@ -44,3 +44,23 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 node_modules
+
+# Local machine-specific config, never portable across devs/CI
+android/local.properties
+
+# Firebase client configs — contain project/app IDs and API keys. Firebase's
+# actual security boundary is Firestore/Storage rules, not secrecy of these
+# files, but they're still excluded going forward so updates aren't pushed.
+# Each dev/CI environment needs to provide these separately (flutterfire
+# configure, or copy from the Firebase console) since they're no longer
+# tracked.
+android/app/google-services.json
+ios/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+
+# Firebase CLI's local hosting/deploy cache — not meant to be shared
+.firebase/
+
+# Claude Code's own session/tool state — never belongs in the repo
+.claude/

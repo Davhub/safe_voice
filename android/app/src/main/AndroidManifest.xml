@@ -5,10 +5,14 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     
-    <!-- Location permissions for background location detection -->
+    <!-- Location is only ever fetched in the foreground while the user is
+         actively submitting a report or browsing Find Services — no
+         background/closed-app location use case, so no
+         ACCESS_BACKGROUND_LOCATION. That permission requires a separate
+         Play Store policy disclosure and was an unjustified rejection risk
+         with nothing in the code actually using it. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     
     <application
         android:label="safe_voice"

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:safe_voice/admin/services/app_usage_analytics_service.dart';
 import 'package:safe_voice/routing/route_paths.dart';
 import 'package:safe_voice/views/views.dart';
 import 'package:safe_voice/widgets/widgets.dart';
 import 'package:safe_voice/models/report.dart';
+
+const List<String> _kTabScreenNames = ['home', 'report', 'resources', 'settings'];
 
 /// Centralized router. Use named navigation throughout the app.
 class AppRouter {
@@ -82,6 +85,15 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _trackScreenVisit(_currentIndex);
+  }
+
+  void _trackScreenVisit(int index) {
+    if (index < 0 || index >= _kTabScreenNames.length) return;
+    AppUsageAnalyticsService.incrementMetric(
+      metricType: 'screenVisit',
+      screen: _kTabScreenNames[index],
+    );
   }
 
   void _onTap(int index) {
@@ -90,6 +102,7 @@ class _MainShellState extends State<MainShell> {
       _navigatorKeys[index].currentState?.popUntil((r) => r.isFirst);
     } else {
       setState(() => _currentIndex = index);
+      _trackScreenVisit(index);
     }
   }
 

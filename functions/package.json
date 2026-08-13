@@ -8,11 +8,11 @@
     "node": "22"
   },
   "dependencies": {
-    "@sendgrid/mail": "^8.1.6",
     "africastalking": "^0.7.9",
     "axios": "^1.17.0",
     "firebase-admin": "^12.7.0",
-    "firebase-functions": "^6.3.2"
+    "firebase-functions": "^6.3.2",
+    "resend": "^4.8.0"
   },
   "devDependencies": {
     "typescript": "^5.6.3"

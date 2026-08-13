@@ -4,3 +4,4 @@ export 'report/report.dart';
 export 'emergency_exit/emergency_exit.dart';
 export 'settings/settings.dart';
 export 'learn/learn.dart';
+export 'services/services.dart';

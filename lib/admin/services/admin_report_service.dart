@@ -154,6 +154,19 @@ class AdminReportService {
             '⚠️ Failed to create notification (non-critical): $notificationError',
           );
         }
+
+        if (status == 'resolved') {
+          try {
+            await AdminActivityService.logReportResolution(
+              caseId,
+              adminId ?? 'admin',
+            );
+          } catch (resolutionError) {
+            print(
+              '⚠️ Failed to log resolution (non-critical): $resolutionError',
+            );
+          }
+        }
       }
 
       return true;
@@ -276,6 +289,49 @@ class AdminReportService {
     } catch (e) {
       print('❌ Error getting report statistics: $e');
       return {'total': 0, 'pending': 0, 'resolved': 0, 'thisWeek': 0};
+    }
+  }
+
+  /// Assigns the case to the acting admin and records it in status_history,
+  /// so it's visible in the same timeline as status changes.
+  static Future<bool> acknowledgeReport({
+    required String caseId,
+    required String adminId,
+    String? adminEmail,
+  }) async {
+    try {
+      final now = Timestamp.now();
+
+      await _firestore.collection('reports').doc(caseId).update({
+        'assignedTo': adminId,
+        'acknowledgedAt': now,
+        'status_history': FieldValue.arrayUnion([
+          {
+            'status': 'acknowledged',
+            'timestamp': now,
+            'admin_id': adminId,
+            'message': 'Case acknowledged by ${adminEmail ?? adminId}',
+          },
+        ]),
+      });
+
+      await AdminActivityService.logReportStatusChange(
+        caseId,
+        'submitted',
+        'acknowledged',
+        adminId,
+      );
+
+      await AdminNotificationService.createStatusChangeNotification(
+        caseId,
+        'submitted',
+        'acknowledged',
+      );
+
+      return true;
+    } catch (e) {
+      debugPrint('Error acknowledging report: $e');
+      return false;
     }
   }
 

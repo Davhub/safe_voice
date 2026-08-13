@@ -176,45 +176,22 @@ class AdminNotificationService {
     }
   }
 
-  /// Determine priority based on report data
+  /// Maps the urgency level the classifier assigned at submission time
+  /// (report_service.dart's classifyUrgency) onto this collection's
+  /// 3-tier notification priority, rather than re-deriving priority here
+  /// from a separate, narrower keyword list.
   static String _determinePriority(Map<String, dynamic> reportData) {
-    final content = (reportData['content'] ?? '').toString().toLowerCase();
-    final keywords = reportData['keywords'] as List<dynamic>? ?? [];
+    final urgency = (reportData['urgency'] as String? ?? 'LOW').toUpperCase();
 
-    final urgentKeywords = [
-      'emergency',
-      'urgent',
-      'danger',
-      'help',
-      'attack',
-      'violence',
-      'assault',
-      'weapon',
-    ];
-    final highKeywords = [
-      'threat',
-      'harassment',
-      'unsafe',
-      'concern',
-      'suspicious',
-      'bullying',
-    ];
-
-    if (keywords.any(
-          (k) => urgentKeywords.contains(k.toString().toLowerCase()),
-        ) ||
-        urgentKeywords.any((k) => content.contains(k))) {
-      return 'urgent';
+    switch (urgency) {
+      case 'CRITICAL':
+      case 'HIGH':
+        return 'urgent';
+      case 'MEDIUM':
+        return 'high';
+      default:
+        return 'normal';
     }
-
-    if (keywords.any(
-          (k) => highKeywords.contains(k.toString().toLowerCase()),
-        ) ||
-        highKeywords.any((k) => content.contains(k))) {
-      return 'high';
-    }
-
-    return 'normal';
   }
 
   /// Format timestamp with accurate relative time

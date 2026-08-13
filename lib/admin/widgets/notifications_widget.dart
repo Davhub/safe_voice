@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:safe_voice/admin/services/admin_notification_service.dart';
-import 'package:safe_voice/admin/services/cached_data_service.dart';
 import 'package:safe_voice/admin/screens/report_detail_screen.dart';
 import 'package:safe_voice/constant/colors.dart';
 
@@ -211,7 +210,20 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
 
   Widget _buildNotificationsList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: CachedDataService.getNotificationsStream(),
+      // Deliberately NOT CachedDataService.getNotificationsStream() — that
+      // wrapper re-subscribes and re-emits its (possibly stale) local
+      // cache every time this widget rebuilds, which raced against the
+      // live Firestore update from markAsRead() and could visually revert
+      // a just-read notification back to unread. This direct Firestore
+      // stream matches the unread-count badge, which never had the bug.
+      stream: AdminNotificationService.getNotificationsStream().map(
+        (snapshot) =>
+            snapshot.docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              data['id'] = doc.id;
+              return data;
+            }).toList(),
+      ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
@@ -580,15 +592,29 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
               .get();
 
       if (reportDoc.exists && mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => ReportDetailScreen(
-                  caseId: reportId,
-                  reportData: reportDoc.data()!,
+        // showDialog (not Navigator.push) so the sidebar stays visible —
+        // matches how ReportListWidget opens the same screen, which was
+        // the inconsistency being fixed here.
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder:
+              (context) => Dialog(
+                insetPadding: const EdgeInsets.all(40),
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  height: MediaQuery.of(context).size.height * 0.9,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: ReportDetailScreen(
+                    caseId: reportId,
+                    reportData: reportDoc.data()!,
+                    isDialog: true,
+                  ),
                 ),
-          ),
+              ),
         );
       }
     } catch (e) {

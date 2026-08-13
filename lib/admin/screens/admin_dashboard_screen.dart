@@ -1,13 +1,16 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:safe_voice/admin/widgets/report_list_widget.dart';
 import 'package:safe_voice/admin/widgets/dashboard_stats_widget.dart';
 import 'package:safe_voice/admin/widgets/usage_analytics_widget.dart';
 import 'package:safe_voice/admin/widgets/notifications_widget.dart';
 import 'package:safe_voice/admin/widgets/settings_widget.dart';
+import 'package:safe_voice/admin/screens/services_management_screen.dart';
+import 'package:safe_voice/admin/screens/partner_agencies_screen.dart';
 import 'package:safe_voice/admin/services/admin_auth_service.dart';
 import 'package:safe_voice/admin/services/admin_notification_service.dart';
 import 'package:safe_voice/admin/services/admin_activity_service.dart';
-import 'package:safe_voice/admin/services/report_listener_service.dart';
 import 'package:safe_voice/admin/services/firestore_init_service.dart';
 import 'package:safe_voice/constant/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -57,6 +60,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       description: 'Completed cases',
     ),
     NavigationItem(
+      icon: Icons.handshake_rounded,
+      label: 'Services',
+      description: 'Find Services directory',
+    ),
+    NavigationItem(
+      icon: Icons.group_add_rounded,
+      label: 'Partners',
+      description: 'Agencies notified on reports',
+    ),
+    NavigationItem(
       icon: Icons.settings_rounded,
       label: 'Settings',
       description: 'System configuration',
@@ -88,8 +101,69 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     // Initialize activities collection if empty
     AdminActivityService.initializeActivities();
 
-    // Start listening to report changes
-    ReportListenerService.startListening();
+    // Note: notifications and activity logs for report submissions/status
+    // changes are created directly at the point of mutation (report
+    // submission, AdminReportService.updateReportStatus/acknowledgeReport)
+    // rather than via a listener here — a listener-based approach only
+    // fires while a dashboard tab happens to be open, and previously
+    // created duplicate entries whenever it was.
+
+    _initFCM();
+  }
+
+  StreamSubscription<RemoteMessage>? _fcmForegroundSubscription;
+  StreamSubscription<RemoteMessage>? _fcmOpenedAppSubscription;
+
+  Future<void> _initFCM() async {
+    try {
+      final messaging = FirebaseMessaging.instance;
+
+      await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      await messaging.subscribeToTopic('agency_officers');
+
+      _fcmForegroundSubscription = FirebaseMessaging.onMessage.listen(
+        _showInAppBanner,
+      );
+
+      _fcmOpenedAppSubscription = FirebaseMessaging.onMessageOpenedApp.listen((
+        message,
+      ) {
+        if (!mounted) return;
+        setState(() => _selectedIndex = 2);
+      });
+    } catch (e) {
+      // Push notifications are a non-critical enhancement — the dashboard
+      // must keep working (e.g. on web without notification permission).
+      debugPrint('FCM initialisation failed: $e');
+    }
+  }
+
+  void _showInAppBanner(RemoteMessage message) {
+    if (!mounted) return;
+
+    final urgency = message.data['urgency'];
+    final isCritical = urgency == 'CRITICAL';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: isCritical ? Colors.red.shade700 : Colors.teal,
+        duration: const Duration(seconds: 8),
+        content: Text(
+          message.notification?.title ?? 'New SafeVoice report received',
+          style: const TextStyle(color: Colors.white),
+        ),
+        action: SnackBarAction(
+          label: 'View',
+          textColor: Colors.white,
+          onPressed: () => setState(() => _selectedIndex = 2),
+        ),
+      ),
+    );
   }
 
   Future<void> _loadSelectedIndex() async {
@@ -118,8 +192,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   @override
   void dispose() {
     _slideAnimationController.dispose();
-    // Stop listening when dashboard is disposed
-    ReportListenerService.stopListening();
+    _fcmForegroundSubscription?.cancel();
+    _fcmOpenedAppSubscription?.cancel();
     super.dispose();
   }
 
@@ -247,11 +321,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     ),
                   ),
                   child: ListTile(
-                    leading: Icon(
-                      item.icon,
-                      color: isSelected ? Colors.white : Colors.white70,
-                      size: 22,
-                    ),
+                    leading: _buildNavIcon(item, isSelected, index, size: 22),
                     title: Text(
                       item.label,
                       style: TextStyle(
@@ -288,6 +358,59 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           _buildAdminUserPanel(),
         ],
       ),
+    );
+  }
+
+  /// Nav item icon, overlaid with a live unread-count badge for the
+  /// Notifications tab (index 2).
+  Widget _buildNavIcon(
+    NavigationItem item,
+    bool isSelected,
+    int index, {
+    double size = 24,
+  }) {
+    final icon = Icon(
+      item.icon,
+      color: isSelected ? Colors.white : Colors.white70,
+      size: size,
+    );
+
+    if (index != 2) return icon;
+
+    return StreamBuilder<int>(
+      stream: AdminNotificationService.getUnreadNotificationCountStream(),
+      builder: (context, snapshot) {
+        final unreadCount = snapshot.data ?? 0;
+        if (unreadCount == 0) return icon;
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            icon,
+            Positioned(
+              top: -4,
+              right: -6,
+              child: Container(
+                width: 16,
+                height: 16,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  unreadCount > 9 ? '9+' : '$unreadCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -432,7 +555,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         return const ReportListWidget();
       case 4: // Resolved
         return const ReportListWidget(status: 'resolved');
-      case 5: // Settings
+      case 5: // Services
+        return const ServicesManagementScreen();
+      case 6: // Partners
+        return const PartnerAgenciesScreen();
+      case 7: // Settings
         return const SettingsWidget();
       default:
         return const DashboardStatsWidget();
@@ -552,10 +679,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   final isSelected = _selectedIndex == index;
 
                   return ListTile(
-                    leading: Icon(
-                      item.icon,
-                      color: isSelected ? Colors.white : Colors.white70,
-                    ),
+                    leading: _buildNavIcon(item, isSelected, index),
                     title: Text(
                       item.label,
                       style: TextStyle(

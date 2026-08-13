@@ -1188,10 +1188,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen>
                   children: [
                     Expanded(
                       child: _buildActionButton(
-                        'Mark as High Priority',
-                        Icons.priority_high,
-                        Colors.red,
-                        () => _updatePriority('high'),
+                        'Acknowledge Case',
+                        Icons.assignment_turned_in,
+                        Colors.indigo,
+                        () => _acknowledgeCase(),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1281,52 +1281,24 @@ class _ReportDetailScreenState extends State<ReportDetailScreen>
   }
 
   // Helper methods
+  /// Reads the urgency level the classifier assigned at submission time
+  /// (report_service.dart's classifyUrgency) — same source of truth as
+  /// ReportListWidget, rather than re-deriving it here from a separate,
+  /// narrower keyword list.
   String _getReportPriority() {
-    final content = (widget.reportData['content'] ?? '').toLowerCase();
-    final keywords = widget.reportData['keywords'] as List<dynamic>? ?? [];
-
-    final highPriorityKeywords = [
-      'emergency',
-      'urgent',
-      'danger',
-      'help',
-      'attack',
-      'violence',
-      'assault',
-    ];
-    final mediumPriorityKeywords = [
-      'threat',
-      'harassment',
-      'unsafe',
-      'concern',
-      'suspicious',
-    ];
-
-    if (keywords.any(
-          (k) => highPriorityKeywords.contains(k.toString().toLowerCase()),
-        ) ||
-        highPriorityKeywords.any((k) => content.contains(k))) {
-      return 'high';
-    }
-
-    if (keywords.any(
-          (k) => mediumPriorityKeywords.contains(k.toString().toLowerCase()),
-        ) ||
-        mediumPriorityKeywords.any((k) => content.contains(k))) {
-      return 'medium';
-    }
-
-    return 'low';
+    return (widget.reportData['urgency'] as String? ?? 'LOW').toLowerCase();
   }
 
   Color _getPriorityColor(String priority) {
     switch (priority) {
+      case 'critical':
+        return Colors.red.shade700;
       case 'high':
-        return Colors.red;
+        return Colors.orange.shade700;
       case 'medium':
-        return Colors.orange;
+        return Colors.amber.shade600;
       case 'low':
-        return Colors.green;
+        return Colors.teal.shade600;
       default:
         return Colors.grey;
     }
@@ -1334,6 +1306,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen>
 
   IconData _getPriorityIcon(String priority) {
     switch (priority) {
+      case 'critical':
+        return Icons.report;
       case 'high':
         return Icons.error;
       case 'medium':
@@ -1559,11 +1533,31 @@ class _ReportDetailScreenState extends State<ReportDetailScreen>
     }
   }
 
-  void _updatePriority(String priority) {
-    // TODO: Implement priority update
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Priority updated to $priority')));
+  Future<void> _acknowledgeCase() async {
+    final success = await AdminReportService.acknowledgeReport(
+      caseId: widget.caseId,
+      adminId: _adminInfo?['uid'] ?? 'unknown',
+      adminEmail: _adminInfo?['email'],
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      await _loadTimeline();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Case acknowledged'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to acknowledge case'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _quickResolve() {

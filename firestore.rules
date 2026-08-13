@@ -2,44 +2,75 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check if user is authenticated admin
+    // Helper function to check if user is an authenticated admin.
+    // Must check membership in the admins collection, not just that the
+    // user is logged in — request.auth.token.email != null is true for
+    // ANY authenticated Firebase user, admin or not.
     function isAdmin() {
-      return request.auth != null && request.auth.token.email != null;
-    }
-    
-    // Helper function to check if user is in admins collection
-    function isAdminInCollection() {
       return request.auth != null
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
     
-    // Reports collection - for anonymous user reports
+    // Reports collection - full report content (survivor-submitted text,
+    // location, audio). Admin/officer only for read — anonymous reporters
+    // must NOT be able to read this collection, even their own case, since
+    // Firestore rules cannot redact individual fields on a document read.
+    // The report_status collection below is the safe, field-limited mirror
+    // anonymous reporters read from instead (kept in sync by the
+    // onReportWrite Cloud Function).
     match /reports/{caseId} {
-      // Allow anonymous users to create reports
-      allow create: if true;
-      
-      // Allow anyone to read (for status checking with case ID)
-      allow read: if true;
-      
+      // Allow anonymous users to create reports. Kept deliberately loose on
+      // shape (type is just required to be a string, no fixed enum or size
+      // cap) — report_service.dart already controls what it writes, and
+      // report types have grown beyond 'text'/'voice' (e.g. 'mixed').
+      // Rejecting a real report is a much worse failure than being lenient
+      // on a collection anonymous callers can already write anything to.
+      allow create: if request.resource.data.keys()
+                        .hasAll(['caseId', 'type', 'status', 'submittedAt'])
+                    && request.resource.data.caseId == caseId
+                    && request.resource.data.status == 'submitted'
+                    && request.resource.data.type is string;
+
+      // No direct read access for anonymous reporters — use report_status.
+      allow read: if isAdmin();
+
       // Allow authenticated admins to update/delete reports
-      allow update: if isAdmin() || isAdminInCollection();
-      allow delete: if isAdmin() || isAdminInCollection();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
-    
+
+    // Queued notification-gateway requests (contains full report content,
+    // written by NotificationGatewayService right after a report is saved)
+    // — same trust model as reports: anonymous create, admin-only read.
+    match /notification_requests/{requestId} {
+      allow create: if true;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // Report status mirror - only status/statusMessage/lastUpdated/etc,
+    // never the report content, location, or audio. Populated exclusively
+    // by the onReportWrite Cloud Function (Admin SDK bypasses rules), so
+    // client writes are always denied here.
+    match /report_status/{caseId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Admin notifications collection - for admin dashboard notifications
     match /admin_notifications/{notificationId} {
       // Allow creation from anywhere (for automatic notification generation)
       allow create: if true;
       
       // Only authenticated admins can read, update, delete
-      allow read: if isAdmin() || isAdminInCollection();
-      allow update, delete: if isAdmin() || isAdminInCollection();
+      allow read: if isAdmin();
+      allow update, delete: if isAdmin();
     }
     
     // Admin users/admins collection - for admin management
     match /admins/{adminId} {
       // Only authenticated admins can read admin data
-      allow read: if isAdmin() || isAdminInCollection();
+      allow read: if isAdmin();
       
       // Admin creation should be done via Console or server-side
       allow create, update, delete: if false;
@@ -48,7 +79,7 @@ service cloud.firestore {
     // Admin messages collection - for internal admin communication
     match /admin_messages/{messageId} {
       // Only authenticated admins can access messages
-      allow read, write: if isAdmin() || isAdminInCollection();
+      allow read, write: if isAdmin();
     }
     
     // Admin activities collection - for tracking admin actions and recent activity
@@ -57,22 +88,42 @@ service cloud.firestore {
       allow create: if true;
       
       // Only authenticated admins can read activities
-      allow read: if isAdmin() || isAdminInCollection();
+      allow read: if isAdmin();
       
       // Only admins can update/delete activities
-      allow update, delete: if isAdmin() || isAdminInCollection();
+      allow update, delete: if isAdmin();
     }
     
     // App usage analytics collection - for anonymous, aggregated usage metrics
     match /app_usage_analytics/{document=**} {
       // Allow authenticated admins to read analytics data
-      allow read: if isAdmin() || isAdminInCollection();
+      allow read: if isAdmin();
       
-      // Allow write access for analytics collection
-      // In production, set this to false and use Cloud Functions for writes
-      allow write: if true; // TEMPORARY - change to false in production
+      // Anonymous, aggregated usage metrics have no auth on the reporter
+      // side, so this stays open. This collection only ever holds counters
+      // (activeUsers, appOpens, screenVisits, deviceTypes, coarseLocations)
+      // written via AppUsageAnalyticsService — no PII is ever put here by
+      // app code, so there's nothing to gate on the rules side.
+      allow write: if true;
     }
     
+    // Service provider directory (Find Services screen) - public read since
+    // it's reporter-facing help content with no PII of its own; only admins
+    // curate it.
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Partner agencies that receive report notifications, and the routing
+    // rules (urgency levels / case types / channels) that decide which
+    // reports go to which partner. Contains contact info, so admin-only —
+    // the notification Cloud Function reads it via the Admin SDK, which
+    // bypasses rules entirely.
+    match /partner_agencies/{partnerId} {
+      allow read, write: if isAdmin();
+    }
+
     // Deny all other access by default for security
     match /{document=**} {
       allow read, write: if false;

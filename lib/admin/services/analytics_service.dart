@@ -439,35 +439,38 @@ class AnalyticsService {
     }
   }
 
-  /// Get comprehensive analytics dashboard data
+  /// Get comprehensive analytics dashboard data.
+  /// Passing both startDate and endDate as null means "All Time" — this
+  /// must reach the underlying queries as null (no date filter) rather
+  /// than being defaulted to the current month, otherwise "All Time"
+  /// silently behaves identically to "Month".
   static Future<Map<String, dynamic>> getDashboardAnalytics({
     DateTime? startDate,
     DateTime? endDate,
   }) async {
     try {
-      final now = DateTime.now();
-      final effectiveStartDate = startDate ?? DateTime(now.year, now.month, 1);
-      final effectiveEndDate = endDate ?? now;
+      final isAllTime = startDate == null && endDate == null;
 
-      // Fetch all analytics in parallel
+      // Fetch all analytics in parallel. A period-over-period comparison
+      // isn't meaningful for "All Time" (there's no "previous all time"),
+      // so skip it rather than silently comparing against the current
+      // month instead.
       final results = await Future.wait([
-        getReportsByCaseType(
-          startDate: effectiveStartDate,
-          endDate: effectiveEndDate,
-        ),
-        getReportsByStatus(
-          startDate: effectiveStartDate,
-          endDate: effectiveEndDate,
-        ),
+        getReportsByCaseType(startDate: startDate, endDate: endDate),
+        getReportsByStatus(startDate: startDate, endDate: endDate),
         getTopReportingLocations(
           limit: 5,
-          startDate: effectiveStartDate,
-          endDate: effectiveEndDate,
+          startDate: startDate,
+          endDate: endDate,
         ),
-        getComparisonData(
-          currentStart: effectiveStartDate,
-          currentEnd: effectiveEndDate,
-        ),
+        isAllTime
+            ? Future.value(<String, dynamic>{})
+            : getComparisonData(
+              currentStart:
+                  startDate ??
+                  DateTime(DateTime.now().year, DateTime.now().month, 1),
+              currentEnd: endDate ?? DateTime.now(),
+            ),
       ]);
 
       return {
@@ -476,8 +479,8 @@ class AnalyticsService {
         'topLocations': results[2],
         'comparison': results[3],
         'dateRange': {
-          'start': effectiveStartDate.toIso8601String(),
-          'end': effectiveEndDate.toIso8601String(),
+          'start': startDate?.toIso8601String(),
+          'end': endDate?.toIso8601String(),
         },
       };
     } catch (e) {

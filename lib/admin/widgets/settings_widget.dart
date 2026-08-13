@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:safe_voice/admin/services/simple_cache_service.dart';
 import 'package:safe_voice/constant/colors.dart';
 
 class SettingsWidget extends StatefulWidget {
@@ -632,7 +633,8 @@ class _SettingsWidgetState extends State<SettingsWidget> {
           (context) => AlertDialog(
             title: const Text('Clear Cache'),
             content: const Text(
-              'Are you sure you want to clear the system cache? This action cannot be undone.',
+              'This clears locally cached reports, notifications, and statistics from this browser. '
+              'Nothing in Firestore is affected — data will be re-fetched on next load.',
             ),
             actions: [
               TextButton(
@@ -640,12 +642,17 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: () {
-                  // Implement cache clearing
+                onPressed: () async {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Cache cleared successfully')),
-                  );
+                  await SimpleCacheService.clearAll();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Local cache cleared successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
                 },
                 child: const Text('Clear'),
               ),
@@ -660,23 +667,14 @@ class _SettingsWidgetState extends State<SettingsWidget> {
       builder:
           (context) => AlertDialog(
             title: const Text('Database Backup'),
-            content: const Text('Create a backup of the current database?'),
+            content: const Text(
+              'Database backup is not yet available from this dashboard. '
+              'Use Firebase Console → Firestore → Backups, or schedule managed exports, to back up production data.',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  // Implement backup
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Backup created successfully'),
-                    ),
-                  );
-                },
-                child: const Text('Backup'),
+                child: const Text('Close'),
               ),
             ],
           ),
@@ -690,20 +688,14 @@ class _SettingsWidgetState extends State<SettingsWidget> {
           (context) => AlertDialog(
             title: const Text('Clear All Data'),
             content: const Text(
-              'WARNING: This will permanently delete all reports and user data. This action cannot be undone!\n\nType "DELETE" to confirm.',
+              'Bulk-deleting all reports and case data is not yet available from this dashboard — '
+              'it is deliberately not wired up here given how sensitive and irreversible that action would be. '
+              'Delete individual cases from the report list if needed.',
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  // Require confirmation
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text('Delete'),
+                child: const Text('Close'),
               ),
             ],
           ),

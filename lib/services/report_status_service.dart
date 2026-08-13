@@ -24,8 +24,11 @@ class ReportStatusService {
       }
 
       // Query Firestore with timeout
+      // Reads from the report_status mirror, not reports/{caseId} directly —
+      // the full report doc is admin/officer-only; this collection only ever
+      // contains the fields safe for an anonymous reporter to see.
       DocumentSnapshot doc = await _firestore
-          .collection('reports')
+          .collection('report_status')
           .doc(cleanCaseId)
           .get()
           .timeout(
@@ -65,7 +68,7 @@ class ReportStatusService {
       } else {
         // Try alternative searches (in case of case sensitivity issues)
         QuerySnapshot querySnapshot = await _firestore
-            .collection('reports')
+            .collection('report_status')
             .where('caseId', isEqualTo: cleanCaseId)
             .limit(1)
             .get()
@@ -129,7 +132,7 @@ class ReportStatusService {
       print('👂 Starting real-time listener for: $cleanCaseId');
 
       StreamSubscription<DocumentSnapshot> subscription = _firestore
-          .collection('reports')
+          .collection('report_status')
           .doc(cleanCaseId)
           .snapshots()
           .listen(

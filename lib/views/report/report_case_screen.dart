@@ -1152,95 +1152,92 @@ class _ReportCaseScreenState extends State<ReportCaseScreen> {
                       color: AppColors.textSecondary,
                     ),
                   ),
-                  // Case Type Selector - NEW
-                  // Column(
-                  //   crossAxisAlignment: CrossAxisAlignment.start,
-                  //   children: [
-                  //     Row(
-                  //       children: [
-                  //         Icon(
-                  //           Icons.category_outlined,
-                  //           size: 18,
-                  //           color: AppColors.primary,
-                  //         ),
-                  //         const SizedBox(width: 8),
-                  //         Text(
-                  //           'Case Type *',
-                  //           style: TextStyle(
-                  //             fontSize: 15,
-                  //             fontWeight: FontWeight.w600,
-                  //             color: AppColors.textPrimary,
-                  //           ),
-                  //         ),
-                  //       ],
-                  //     ),
-                  //     const SizedBox(height: 12),
-                  //     Container(
-                  //       decoration: BoxDecoration(
-                  //         color: AppColors.background,
-                  //         borderRadius: BorderRadius.circular(14),
-                  //         border: Border.all(
-                  //           color: AppColors.primary.withOpacity(0.2),
-                  //           width: 1.5,
-                  //         ),
-                  //       ),
-                  //       child: DropdownButtonFormField<CaseType>(
-                  //         value: _selectedCaseType,
-                  //         decoration: InputDecoration(
-                  //           border: InputBorder.none,
-                  //           contentPadding: const EdgeInsets.symmetric(
-                  //             horizontal: 16,
-                  //             vertical: 4,
-                  //           ),
-                  //           prefixIcon: Icon(
-                  //             Icons.report_problem_outlined,
-                  //             color: AppColors.primary,
-                  //             size: 22,
-                  //           ),
-                  //         ),
-                  //         style: TextStyle(
-                  //           fontSize: 15,
-                  //           color: AppColors.textPrimary,
-                  //           fontWeight: FontWeight.w500,
-                  //         ),
-                  //         dropdownColor: AppColors.card,
-                  //         isExpanded: true,
-                  //         items: CaseType.all.map((CaseType caseType) {
-                  //           return DropdownMenuItem<CaseType>(
-                  //             value: caseType,
-                  //             child: Column(
-                  //               crossAxisAlignment: CrossAxisAlignment.start,
-                  //               mainAxisSize: MainAxisSize.min,
-                  //               children: [
-                  //                 Text(
-                  //                   caseType.displayName,
-                  //                   style: TextStyle(
-                  //                     fontWeight: FontWeight.w600,
-                  //                     color: AppColors.textPrimary,
-                  //                   ),
-                  //                 ),
-                  //                 // Text(
-                  //                 //   caseType.description,
-                  //                 //   style: TextStyle(
-                  //                 //     fontSize: 10,
-                  //                 //     color: AppColors.textSecondary,
-                  //                 //   ),
-                  //                 // ),
-                  //               ],
-                  //             ),
-                  //           );
-                  //         }).toList(),
-                  //         onChanged: (CaseType? newValue) {
-                  //           if (newValue != null) {
-                  //             setState(() {
-                  //               _selectedCaseType = newValue;
-                  //             });
-                  //           }
-                  //         },
-                  //       ),
-                  //     ),
-                  //   ],
-                  // ),
+                  // Case Type Selector — lets whoever entered via the bottom
+                  // nav Report tab (no case type preselected from the Home
+                  // "Report a Case" tile) explicitly pick one instead of it
+                  // silently staying at the CaseType.FGM default, which was
+                  // corrupting the case-type breakdown in admin analytics.
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.category_outlined,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Case Type *',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppColors.primary.withOpacity(0.2),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: DropdownButtonFormField<CaseType>(
+                          value: _selectedCaseType,
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.report_problem_outlined,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
+                          ),
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          dropdownColor: AppColors.card,
+                          isExpanded: true,
+                          items: CaseType.all.map((CaseType caseType) {
+                            return DropdownMenuItem<CaseType>(
+                              value: caseType,
+                              child: Text(
+                                caseType.displayName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (CaseType? newValue) {
+                            if (newValue != null) {
+                              setState(() {
+                                _selectedCaseType = newValue;
+                              });
+                              // A manual in-screen change takes precedence
+                              // over whatever the Home tile flow left in the
+                              // global notifier, so it doesn't get
+                              // overwritten back by a stale _onCaseTypeChanged
+                              // callback firing later.
+                              CaseTypeNotifier.instance.value = newValue;
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 10),
                   // Modern text field
                   Container(

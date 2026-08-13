@@ -69,17 +69,19 @@ class HomeScreen extends StatelessWidget {
                   onTap: () => _showCaseTypeSelectionModal(context),
                 ),
 
-                // Learn about FGM Card
+                // Find Services Card
                 _buildGridCard(
-                  icon: Icons.school,
-                  title: 'Learn about FGM',
-                  subtitle: 'Information and Resources',
+                  icon: Icons.handshake_outlined,
+                  title: 'Find Services',
+                  subtitle: 'Nearby help & support providers',
                   color: AppColors.secondary,
                   onTap: () {
-                    final tabNav = TabNavigationProvider.of(context);
-                    if (tabNav != null) {
-                      tabNav.switchToTab(2); // Switch to Learn tab (index 2)
-                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const FindServicesScreen(),
+                      ),
+                    );
                   },
                 ),
 
